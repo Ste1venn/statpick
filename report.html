@@ -1,0 +1,1125 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>统计选型地图 · StatPick</title>
+<meta name="description" content="不按知识点学统计，按场景学方法选型：58 张方法卡、12 个模块、3 棵决策树、12 道自测。">
+<style>
+:root {
+  --bg: #f6f3ec;
+  --panel: #fffdf8;
+  --panel-2: #efeade;
+  --ink: #1c1b18;
+  --muted: #6d675c;
+  --line: #e0d9cb;
+  --accent: #b3442c;
+  --accent-2: #2f6f68;
+  --good: #2f6b3f;
+  --bad: #a3342a;
+  --shadow: 0 12px 40px rgba(40, 32, 20, .08);
+  --sans: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+  --serif: "Songti SC", "Noto Serif SC", "Source Han Serif SC", Georgia, serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --sidebar: 288px;
+}
+[data-theme="dark"] {
+  --bg: #131210;
+  --panel: #1c1a17;
+  --panel-2: #24211d;
+  --ink: #eae4d8;
+  --muted: #a49b8b;
+  --line: #302b25;
+  --accent: #e07a5f;
+  --accent-2: #6fb3a8;
+  --good: #8bc79a;
+  --bad: #e08078;
+  --shadow: 0 12px 40px rgba(0, 0, 0, .35);
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 17px;
+  line-height: 1.95;
+  letter-spacing: .01em;
+  overflow-x: clip;
+}
+a { color: var(--accent-2); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a:hover { color: var(--accent); }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+
+/* ---------- shell ---------- */
+#sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: var(--sidebar);
+  background: var(--panel);
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  z-index: 50;
+  transition: transform .24s ease;
+}
+.side-head { padding: 22px 22px 12px; border-bottom: 1px solid var(--line); }
+.side-kicker { font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+.side-title { font-family: var(--serif); font-size: 22px; line-height: 1.3; margin: 6px 0 12px; }
+.progress { height: 3px; background: var(--panel-2); border-radius: 99px; overflow: hidden; }
+.progress span { display: block; height: 100%; width: 0; background: var(--accent); transition: width .1s linear; }
+.side-nav { padding: 10px 10px 20px; overflow-y: auto; flex: 1; overscroll-behavior: contain; }
+.nav-link {
+  display: block;
+  padding: 7px 12px;
+  margin: 1px 0;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--muted);
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  border-radius: 0 6px 6px 0;
+}
+.nav-link:hover { color: var(--ink); background: var(--panel-2); }
+.nav-link[aria-current="true"] { color: var(--accent); border-left-color: var(--accent); background: var(--panel-2); font-weight: 600; }
+.nav-link .num { display: inline-block; width: 22px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.nav-link[aria-current="true"] .num { color: var(--accent); }
+.side-foot { padding: 12px 18px 18px; border-top: 1px solid var(--line); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.side-foot .meta { font-size: 11.5px; color: var(--muted); margin-right: auto; }
+.icon-btn {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 8px;
+  padding: 5px 9px;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+#main { margin-left: var(--sidebar); min-width: 0; }
+#content { max-width: 880px; margin: 0 auto; padding: 48px 40px 110px; }
+#drawer-btn {
+  display: none;
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 60;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  border-radius: 999px;
+  padding: 10px 16px;
+  font-size: 14px;
+  cursor: pointer;
+}
+#overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .42);
+  z-index: 45;
+}
+body.nav-open #overlay { display: block; }
+@media (max-width: 1099px) {
+  #sidebar { transform: translateX(-102%); box-shadow: var(--shadow); }
+  body.nav-open #sidebar { transform: none; }
+  #main { margin-left: 0; }
+  #drawer-btn { display: inline-flex; align-items: center; gap: 6px; }
+  body.nav-open #drawer-btn { display: none; }
+  #content { padding: 28px 20px 100px; }
+}
+
+/* ---------- hero ---------- */
+.hero { padding: 10px 0 26px; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+.hero .kicker { font-size: 12px; letter-spacing: .16em; color: var(--accent); text-transform: uppercase; font-weight: 700; }
+.hero h1 { font-family: var(--serif); font-size: clamp(34px, 5vw, 54px); line-height: 1.18; margin: 10px 0 12px; letter-spacing: -.01em; }
+.hero .sub { font-size: 17px; color: var(--muted); max-width: 40em; margin: 0 0 18px; line-height: 1.8; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 18px; }
+.chip { font-size: 12.5px; border: 1px solid var(--line); background: var(--panel); padding: 4px 10px; border-radius: 999px; color: var(--muted); }
+.chip b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.hero-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 9px;
+  padding: 8px 14px;
+  font-size: 14px;
+  cursor: pointer;
+  text-decoration: none;
+  color: var(--ink);
+}
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary:hover { filter: brightness(1.06); }
+
+/* ---------- prose ---------- */
+#content .hero + h2 { margin-top: 30px; padding-top: 0; border-top: 0; }
+#content h2 {
+  font-family: var(--serif);
+  font-size: clamp(25px, 3.2vw, 32px);
+  line-height: 1.3;
+  margin: 64px 0 18px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+  scroll-margin-top: 24px;
+}
+#content h2 .hnum { color: var(--accent); font-family: var(--sans); font-size: .62em; font-weight: 700; letter-spacing: .08em; margin-right: 10px; vertical-align: 2px; }
+#content h3 { font-size: 20px; margin: 30px 0 10px; line-height: 1.45; }
+#content p { margin: 0 0 1.25em; }
+#content strong { font-weight: 700; }
+#content code { font-family: var(--mono); font-size: .86em; background: var(--panel-2); padding: 2px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+#content blockquote { margin: 18px 0; padding: 12px 18px; border-left: 3px solid var(--accent); background: var(--panel); color: var(--muted); }
+#content ul, #content ol { padding-left: 1.4em; }
+#content li { margin: .3em 0; }
+.cite { font-size: 10.5px; color: var(--accent-2); text-decoration: none; border-bottom: 1px dotted var(--accent-2); padding: 0 1px; white-space: nowrap; }
+.cite:hover { color: var(--accent); border-color: var(--accent); }
+.table-wrap { width: 100%; overflow-x: auto; margin: 18px 0 24px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+table { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 1.65; }
+th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+th { background: var(--panel-2); font-size: 12.5px; letter-spacing: .03em; color: var(--muted); font-weight: 600; white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+tbody tr:hover { background: color-mix(in srgb, var(--accent) 4%, transparent); }
+
+/* ---------- cards ---------- */
+.block-title { font-family: var(--serif); font-size: 24px; margin: 34px 0 6px; }
+.block-sub { color: var(--muted); font-size: 14px; margin: 0 0 16px; }
+.cards-toolbar {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  padding: 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel);
+  margin: 14px 0 10px;
+}
+.cards-toolbar input[type="search"] {
+  flex: 1 1 220px; min-width: 0;
+  border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 8px 10px; font-size: 14px;
+}
+.cards-toolbar select {
+  border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 8px 8px; font-size: 13px; max-width: 100%;
+}
+.cards-count { font-size: 12.5px; color: var(--muted); margin-left: auto; white-space: nowrap; }
+.cards-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 780px) { .cards-grid { grid-template-columns: minmax(0, 1fr); } }
+.card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 15px 12px;
+  display: flex; flex-direction: column; gap: 6px; min-width: 0;
+}
+.card:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.card-head { display: flex; align-items: flex-start; gap: 8px; }
+.card-head h3 { margin: 0; font-size: 16.5px; line-height: 1.4; flex: 1; }
+.card-head .en { display: block; font-size: 11px; color: var(--muted); font-weight: 400; margin-top: 2px; }
+.tier { flex: 0 0 auto; font-size: 11px; font-weight: 700; border-radius: 6px; padding: 1px 6px; border: 1px solid currentColor; }
+.tier.S { color: var(--accent); }
+.tier.A { color: var(--accent-2); }
+.tier.B { color: #8a6a2f; }
+.tier.C { color: var(--muted); }
+.card .answer { font-size: 14px; line-height: 1.7; margin: 0; }
+.card .modtag { font-size: 11px; color: var(--muted); }
+.card details { margin-top: 2px; }
+.card summary { cursor: pointer; font-size: 12.5px; color: var(--accent-2); list-style: none; }
+.card summary::-webkit-details-marker { display: none; }
+.card summary::before { content: "＋ "; }
+.card details[open] summary::before { content: "－ "; }
+.kv { display: grid; grid-template-columns: 74px minmax(0, 1fr); gap: 4px 8px; font-size: 13px; line-height: 1.65; margin: 8px 0 2px; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; overflow-wrap: anywhere; }
+.card-actions { display: flex; gap: 8px; margin-top: auto; padding-top: 6px; }
+.mini { font-size: 11.5px; border: 1px solid var(--line); background: transparent; border-radius: 6px; padding: 3px 8px; cursor: pointer; color: var(--muted); }
+.mini:hover { border-color: var(--accent); color: var(--accent); }
+.mini[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.empty { color: var(--muted); font-size: 14px; padding: 18px 4px; }
+
+/* compare tray */
+#tray {
+  position: fixed; left: 50%; bottom: 16px; transform: translate(-50%, 130%);
+  background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow);
+  border-radius: 999px; padding: 8px 10px 8px 16px; display: flex; gap: 8px; align-items: center;
+  z-index: 70; transition: transform .2s ease; max-width: calc(100vw - 24px);
+}
+#tray.show { transform: translate(-50%, 0); }
+#tray .tray-text { font-size: 13px; color: var(--muted); white-space: nowrap; }
+#modal {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, .45); z-index: 80; display: none;
+  align-items: center; justify-content: center; padding: 20px;
+}
+#modal.show { display: flex; }
+.modal-card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); width: min(980px, 100%); max-height: 86vh; overflow: auto; padding: 18px; }
+.modal-head { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.modal-head h3 { margin: 0; font-size: 18px; flex: 1; }
+
+/* ---------- quiz ---------- */
+.quiz-summary { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; margin: 16px 0 14px; }
+.quiz-summary .score { font-size: 14px; }
+.quiz-summary .score b { font-variant-numeric: tabular-nums; }
+.q { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin: 12px 0; }
+.q h4 { margin: 0 0 6px; font-size: 17px; line-height: 1.45; }
+.q .qmod { font-size: 11px; color: var(--accent); letter-spacing: .06em; }
+.q .ctx { font-size: 14.5px; color: var(--muted); margin: 6px 0 4px; line-height: 1.75; }
+.q .ask { font-size: 14px; font-weight: 600; margin: 8px 0; }
+.opts { display: grid; gap: 7px; }
+.opt {
+  text-align: left; border: 1px solid var(--line); background: var(--bg); border-radius: 9px;
+  padding: 9px 12px; font-size: 14px; line-height: 1.6; cursor: pointer;
+}
+.opt:hover:not(:disabled) { border-color: var(--accent); }
+.opt:disabled { cursor: default; }
+.opt.correct { border-color: var(--good); background: color-mix(in srgb, var(--good) 12%, var(--panel)); }
+.opt.wrong { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 10%, var(--panel)); }
+.opt .why { display: block; font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+.opt .why[hidden] { display: none; }
+.fb { margin-top: 9px; font-size: 13.5px; line-height: 1.75; padding: 10px 12px; border-radius: 8px; background: var(--panel-2); }
+.fb b { color: var(--ink); }
+.q.done .ask { color: var(--muted); }
+
+/* ---------- trees ---------- */
+.trees { display: grid; gap: 16px; margin: 20px 0 28px; }
+.tree { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; min-width: 0; }
+.tree h3 { margin: 0 0 12px; font-size: 17px; }
+.tnode { display: inline-block; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font-size: 13.5px; font-weight: 600; }
+.tree > .tnode { background: color-mix(in srgb, var(--accent) 10%, var(--panel)); border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); }
+.tbranch { margin: 8px 0 0 10px; padding-left: 12px; border-left: 2px solid var(--line); display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 8px; align-items: start; }
+.tlabel { font-size: 12px; font-weight: 700; color: var(--accent-2); padding-top: 5px; }
+.tchild { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.tleaf { font-size: 13px; line-height: 1.6; color: var(--ink); }
+.tleaf b { color: var(--accent); }
+@media (max-width: 620px) {
+  .tbranch { grid-template-columns: 64px minmax(0, 1fr); }
+  .tlabel { font-size: 11px; }
+}
+
+/* ---------- sources ---------- */
+#sources-table td:first-child { white-space: nowrap; font-variant-numeric: tabular-nums; }
+#sources-table td:nth-child(2) { width: 34%; min-width: 200px; }
+#sources-table td:nth-child(4) { width: 42%; }
+.ev { font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 5px; padding: 1px 5px; white-space: nowrap; }
+
+/* ---------- footer ---------- */
+.footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12.5px; }
+.footer a { color: var(--accent-2); }
+
+/* ---------- print ---------- */
+@media print {
+  #sidebar, #drawer-btn, #overlay, #tray { display: none !important; }
+  #main { margin: 0; }
+  #content { max-width: none; padding: 0; }
+  body { background: #fff; color: #000; font-size: 11pt; }
+  .card, .q, .tree { break-inside: avoid; }
+  a { color: #000; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition: none !important; }
+}
+
+.skip { position: absolute; left: -999px; top: 8px; background: var(--panel); padding: 8px 12px; border-radius: 8px; z-index: 999; }
+.skip:focus { left: 8px; }
+.ref-note { font-size: 12.5px; color: var(--muted); }
+.noscript { padding: 12px; border: 1px solid var(--line); border-radius: 8px; }
+</style>
+<script>window.__errors=[];window.addEventListener("error",function(e){window.__errors.push((e.message||"")+" @ "+(e.lineno||0));});</script>
+<script>
+try {
+  var t = localStorage.getItem("statpick.theme");
+  if (t === "dark" || (!t && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+    document.documentElement.setAttribute("data-theme", "dark");
+  }
+} catch (e) {}
+</script>
+</head>
+<body>
+<a class="skip" href="#content">跳到正文</a>
+<div id="sidebar"></div>
+<main id="main"><div id="content">
+<noscript><p class="noscript">卡片、决策树和自测需要 JavaScript。</p></noscript>
+<h2 id="s0"><span class="hnum">0</span>十分钟速读</h2>
+<p>这份地图只做一件事，把企业里常见的统计方法和你在真实场景里该怎么选放在同一张桌上，让你先看见全貌，再决定从哪一格开始练；它不按章节讲定义，也不要求你背完公式才准开始，因为方法选型从来不是回忆题，而是一道在约束条件下做取舍的判断题。</p>
+<p>你手上有一个业务问题，数据长成这个样子，老板要你在周五之前给一个能拍板的结论，这时候你真正需要的不是把 t 检验、卡方和回归的定义再背一遍，而是先判断这个问题的目标到底是什么，因为目标一变，后面该看的数据结构、该检查的前提，以及该报的误差就全变了。</p>
+<p>这份报告有五条结论，你先记住它们，后面每一节都在为这五条补证据；第一，方法选型是决策技能，练的是先问目标和数据结构，而不是先想检验名字；第二，企业里最高频的是描述与区间、两组比较和回归、实验和预测，经典检验是这些动作底下的零件；第三，小样本比例、配对结构，还有多重比较和极端值，是最容易让你翻车的四个点；第四，统计显著不等于业务重要，你必须同时报效应量、区间和犯错的代价；第五，你的十二个模块和每天二十分钟的循环，比一份更长的课程表更有用。</p>
+<p>如果你只有十分钟，读这一节、第三棵决策树和第四节的方法卡索引就够了；如果你有四十五分钟，再加第一节的学习方法和第二节的企业方法，然后把十二道开场题做一遍，错三题以内算建立框架，错五题以上说明你需要的不是更多阅读，而是马上开始做题。</p>
+<h2 id="s1"><span class="hnum">1</span>学习方法：为什么“看懂了”不等于“会选”</h2>
+<p>方法选型是一种分类决策技能，你面对的是一个没见过的场景，要在几秒钟内判断它属于哪一类问题、数据结构允许哪些方法、哪个前提最可能失效，这种能力和背定义的能力不是同一种东西，因为背定义只需要记住词，而做判断需要在一堆表面细节里认出深层结构；Chi 等人在物理题分类实验里早就看到，专家按深层原理分组，新手按表面特征分组 <a class="cite" href="#s-S12">S12</a>。</p>
+<p>认知科学里最稳的一条结论是提取练习比重读有效，你合上书，自己把“这个场景该用什么、为什么”说出来，记忆和迁移都比再读一遍强；你看，Dunlosky 等人评估了十种常见学习技术，练习测试和分散练习拿到高效用评级，重读、划线和总结只拿到低效用，这个排序和大多数人的直觉相反 <a class="cite" href="#s-S01">S01</a>；Adesope 等人的元分析也发现练习测试比重读和其他对照条件更有效 <a class="cite" href="#s-S02">S02</a>，Rowland 的元分析进一步指出，回忆式测试比重认式测试带来的收益更大 <a class="cite" href="#s-S03">S03</a>。</p>
+<p>第二条是间隔，你想啊，你今天学会一个判断，隔一天，隔三天，隔一周，隔三周各回来一次，比一个下午连刷五十题更能留住；Cepeda 等人汇总了 839 个分散练习的评估，发现最佳复习间隔会随着你要保留的时间变长而变长，所以你不能用一个固定的“三天后复习”打发所有内容 <a class="cite" href="#s-S04">S04</a>。</p>
+<p>第三条是交错，说白了，你把不同模块的题混在一起做，会比一个模块连做二十题更难受，但正是这种难受逼你去辨别“这道题和上一道到底差在哪”；Brunmair 和 Richter 的元分析发现交错对归纳学习有正效应，但效应受材料相似性和复杂度调节，说明文和单词类材料的收益就要谨慎 <a class="cite" href="#s-S05">S05</a>。</p>
+<p>第四条是工作样例，你看，你刚接触一个方法时，先看一个带数字的完整算例，再逐步撤掉步骤自己补，比一上来就硬解题更省认知资源；说白了，Sweller 的认知负荷理论解释了为什么新手的解题努力常常花在“怎么算”上，而不是“为什么选它”上，Renkl 和 Atkinson 则证明逐步撤除的样例比一直看或直接做题更利于迁移 <a class="cite" href="#s-S10">S10</a><a class="cite" href="#s-S11">S11</a>。</p>
+<p>第五条是对比案例，其实，你把两个只差一个条件的场景放在一起看，比如“两组不同的人”和“同一批人前后测”，你会立刻看见配对结构才是决定 t 检验版本的那个深层特征；Alfieri 等人汇总了 57 个实验、336 个检验，案例比较比单例和传统讲授的平均效应量是 d=0.50，而且“让学习者找相似”“比较后再给原理”“比较完立即测试”是最有效的三个调节项 <a class="cite" href="#s-S08">S08</a>。</p>
+<p>第六条是反馈，你看，你答错之后不能只看到正确答案，还要看到“你为什么会选它”和“这个错法在什么条件下会变成对的”；Wisniewski 等人汇总了 435 项研究、994 个效应，反馈总体 d=0.48，但异质性很大，说明反馈的内容和形式比“有没有反馈”更重要 <a class="cite" href="#s-S07">S07</a>。</p>
+<p>第七条是自我解释，其实，你在选完方法后补一句“因为这两组是同一批人，所以不能用独立样本 t”，这句话会逼你把直觉翻译成可检验的理由；Bisra 等人的元分析专门看自我解释，但我没取到摘要，所以只把它当作方向性提示，不拿一个漂亮数字唬你 <a class="cite" href="#s-S06">S06</a>。</p>
+<p>反过来，有两件事看起来像学习，其实没有证据支持；Pashler 等人审查了学习风格匹配的研究，找不到“按视觉/听觉型设计课程”能产生的那种交互效应 <a class="cite" href="#s-S09">S09</a>，而 Roediger 和 Karpicke 的实验里，重读在 5 分钟后确实更好，但一周后测试组反超 <a class="cite" href="#s-S15">S15</a>，这说明熟悉感很容易被误当成掌握。</p>
+<p>先试后教也不是一句口号，Kapur 的有效失败和 Schwartz 与 Bransford 的 A Time For Telling 都指向同一件事，先让学习者自己尝试、再给规范讲解，迁移表现反而更好 <a class="cite" href="#s-S13">S13</a><a class="cite" href="#s-S14">S14</a>；当然，失败之后必须有整合讲解，否则就只是失败。</p>
+<p>第八条是校准，你在提交答案前先给自己打一个 1 到 5 分的把握，做完之后把“你以为的对”和“实际的对”画在一起，你会发现自己最常犯的错不是不会，而是过度自信；这类元认知训练在统计学习里尤其重要，因为 p 值和置信区间是最容易被“读起来很顺”骗过去的两块内容 <a class="cite" href="#s-S18">S18</a><a class="cite" href="#s-S20">S20</a>。</p>
+<p>第九条是迁移，你想想，你在招聘漏斗里学会了 Fisher 精确检验，换到制造业的缺陷率对比还能不能认出来，取决于你练过多少个换了表面特征的场景；GAISE 2016 反复强调统计应该作为一个探究过程来教，而不是一堆互不相关的公式，原因就在这里 <a class="cite" href="#s-S22">S22</a>；Chance 等人也讨论过技术工具在统计教学里的选择和实施挑战 <a class="cite" href="#s-S21">S21</a>。</p>
+<p>第十条是认知负荷，你一屏只放一个判断，公式后置，先把“目标是什么、数据长什么样，以及前提是否满足”三件事问完，再让符号进场，因为新手的工作记忆一旦被符号占满，就没有余力去比较候选方法了 <a class="cite" href="#s-S10">S10</a>。</p>
+<p>最后两条是统计教育自己的经验，一条是问题先行，Wild 和 Pfannkuch 把统计思维拆成探究循环、质疑循环以及四种思维类型和 disposition 四个维度，核心不是算得快，而是知道自己在探究的哪一步 <a class="cite" href="#s-S18">S18</a>；另一条是模拟和重抽样，Tintle 等人发现用模拟方法讲推断，能让学生更清楚地看见“如果原假设为真，世界会怎样”，而不是把 p 值当成一个神秘数字 <a class="cite" href="#s-S19">S19</a>。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>学习技术</th>
+<th>证据强度</th>
+<th>在网站里的落地</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>提取练习</td>
+<td>强，元分析支持</td>
+<td>先做题再看卡，答案提交前不显示</td>
+</tr>
+<tr>
+<td>分散练习</td>
+<td>强，839 个评估</td>
+<td>1/3/7/21 天复习盒</td>
+</tr>
+<tr>
+<td>交错练习</td>
+<td>中到强，受材料调节</td>
+<td>复习队列混模块，不连续出同模块</td>
+</tr>
+<tr>
+<td>工作样例</td>
+<td>强，新手尤其明显</td>
+<td>每模块一个带数字的最小算例，再逐步撤掉</td>
+</tr>
+<tr>
+<td>对比案例</td>
+<td>强，d=0.50</td>
+<td>每模块至少一组只差一个条件的近邻对</td>
+</tr>
+<tr>
+<td>具体反馈</td>
+<td>强，d=0.48 但异质</td>
+<td>每个干扰项都有独立错因解释</td>
+</tr>
+<tr>
+<td>自我解释</td>
+<td>中，方向一致</td>
+<td>选完方法后必须补一句“因为……”</td>
+</tr>
+<tr>
+<td>校准</td>
+<td>中</td>
+<td>提交前打把握分，画置信桶准确率</td>
+</tr>
+<tr>
+<td>迁移</td>
+<td>中</td>
+<td>每模块一道跨行业冷案</td>
+</tr>
+<tr>
+<td>认知负荷</td>
+<td>强</td>
+<td>一屏一个判断，公式后置</td>
+</tr>
+<tr>
+<td>问题先行</td>
+<td>强，GAISE 推荐</td>
+<td>场景先于定义，先问目标再问方法</td>
+</tr>
+<tr>
+<td>正面拆误解</td>
+<td>中</td>
+<td>每模块列两条最常见错法</td>
+</tr>
+</tbody>
+</table></div>
+<p>这些证据合起来指向一个不太讨喜的结论，你最该做的不是再找一本更全的教材，而是把每个方法绑到一个判断动作上，先做题再看卡，错了就回到那个只差一个条件的近邻场景，隔几天再用混合题把它捞回来；这套循环听起来很朴素，所以它同时命中了提取与间隔、交错以及对比和反馈五个高证据强度的机制。</p>
+<p>我给你一个二十分钟的日循环，三分钟读一张卡，十分钟做三道题，五分钟用三句话把“我会怎么跟老板说”讲出来，最后两分钟只记一件事，我这次错在目标和结构、前提以及计算或解读越界；你不需要每天都学新模块，所以复习题占一半时间，效果反而更好。</p>
+<p>这里要提醒你一个自己的风险，你过去的学习习惯是画 canvas、搭框架，再把资料收得很整齐，这些动作让你产生“我在推进”的感觉，但它们不等于会判断；你自己在复盘里写过，很多线推进到“有文件、有框架”就停了，因为下一步要交付到外部，而交付会被评价 <a class="cite" href="#ref-r1">R1</a>，所以这份地图每一节后面都放了判断题，网站默认首页也应该是今日队列，而不是目录。</p>
+<h2 id="s2"><span class="hnum">2</span>企业里到底在用什么</h2>
+<p>先说一句不讨巧的话，世界上没有一份“全球企业统计方法使用普查”，任何声称“全球最常用”的排行榜，要么样本只覆盖某一个行业，要么把工具使用和方法使用混在一起；我能做的是用四类证据交叉验证，再把方法分成 S/A/B/C 四层，告诉你哪些是几乎每个数据岗都会碰到的前置，哪些是特定行业的高频，哪些是低频但关键。</p>
+<p>第一类证据是招聘 JD，我采了 40 条远程数据岗位的公开描述，样本里 SQL 出现 16 次、Python 出现 21 次、A/B 测试出现 8 次、时间序列出现 6 次、回归出现 3 次，而 t 检验、卡方和 ANOVA 这些具名经典检验几乎没有出现 <a class="cite" href="#s-S34">S34</a>；这不是说企业不用它们，而是说 JD 主要写工具、实验和业务动作，真正的统计方法藏在“实验设计”“指标口径”“因果评估”这些词后面，所以你不能靠数 JD 里的方法名来判断什么重要。</p>
+<p>第二类证据是从业者调查和教材，年度调查的口径差异很大，有的问工具，有的问算法，年份也参差不齐，所以我把它们降为辅助；真正稳定的是教材的核心章节，Bruce 和 Bruce 的《面向数据科学家的实用统计学》第二版把数据科学常用统计压成七章，探索性数据分析、数据与抽样分布、统计实验与显著性检验、回归与预测和分类，再往下是统计机器学习、无监督学习，这七章就是企业数据分析的常见骨架 <a class="cite" href="#s-S31">S31</a>。</p>
+<p>第三类证据是工具和行业标准，NIST/SEMATECH 的电子手册按工程目的组织方法，先做探索性数据分析，再做测量过程分析，接着做过程建模和试验设计，最后是过程控制和过程能力，以及可靠性，这七块对应制造和质量岗的日常 <a class="cite" href="#s-S24">S24</a>；ICH E9(R1) 则把临床统计的第一件事定成“先写 estimand，再选分析方法”，也就是先把你要估的那个量说清楚，再谈用什么模型 <a class="cite" href="#s-S23">S23</a>；巴塞尔协议把信用风险、市场风险和操作风险的模型验证写进了监管框架，评分卡和回测不是可选动作 <a class="cite" href="#s-S33">S33</a>。</p>
+<p>第四类证据是大厂实践，微软 Bing 在 2013 年就有每天 200 多个并发实验，LinkedIn 后来到了 400 多个，13 家机构在 2019 年的实验峰会上共同总结的挑战里，样本比例失衡、偷看结果，以及多重比较和指标选择都排在前面 <a class="cite" href="#s-S25">S25</a><a class="cite" href="#s-S27">S27</a><a class="cite" href="#s-S28">S28</a>；这些论文的共同点是，实验平台越成熟，越不讨论“用 t 还是 z”，而是讨论随机化单位、方差缩减，以及序贯规则和治理机制，这说明企业真正稀缺的能力是设计和判断，不是套公式；微软的 ExP 平台公开介绍也把可信实验、低摩擦流程和规模化验证写成了核心目标 <a class="cite" href="#s-S35">S35</a>。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>层级</th>
+<th>代表方法</th>
+<th>为什么在这一层</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>S</td>
+<td>描述、标准误与区间、两比例与卡方、t 与 ANOVA、线性回归、逻辑回归、A/B 与样本量</td>
+<td>几乎每个数据岗都会碰到，而且是其他方法的前置</td>
+</tr>
+<tr>
+<td>A</td>
+<td>异常值诊断、Bootstrap、非参数检验、回归诊断、ROC 与校准、序贯、CUPED、DiD、时间序列、聚类、PCA</td>
+<td>高频且不容易替代，出错的代价大</td>
+</tr>
+<tr>
+<td>B</td>
+<td>稳健回归、RDD、IV、合成控制、因子分析、贝叶斯、生存分析、混合模型、MSA 与 SPC、抽样加权、信度、联合分析、非劣效</td>
+<td>特定行业里是硬要求，换个行业可能一年用不上</td>
+</tr>
+<tr>
+<td>C</td>
+<td>IRT、MMM</td>
+<td>低频但关键，知道什么时候该找专家就够</td>
+</tr>
+</tbody>
+</table></div>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>行业</th>
+<th>高频方法</th>
+<th>典型问题</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>互联网产品</td>
+<td>A/B 实验、漏斗、留存、归因、因果推断</td>
+<td>改版有没有用、哪个渠道真增量</td>
+</tr>
+<tr>
+<td>咨询</td>
+<td>问卷、回归、联合分析、政策评估</td>
+<td>客户该进哪个市场、定价多少</td>
+</tr>
+<tr>
+<td>金融</td>
+<td>评分卡、时间序列、压力测试、模型验证</td>
+<td>违约概率、风险资本、模型是否可靠</td>
+</tr>
+<tr>
+<td>制造</td>
+<td>SPC、MSA、DOE、能力指数</td>
+<td>过程稳不稳、量具准不准、参数怎么调</td>
+</tr>
+<tr>
+<td>医药</td>
+<td>随机对照、ANCOVA、混合模型、生存分析、非劣效</td>
+<td>药有没有效、能不能证明不差</td>
+</tr>
+<tr>
+<td>市场研究</td>
+<td>联合分析、MMM、Uplift、分群</td>
+<td>用户看重什么、预算怎么分</td>
+</tr>
+<tr>
+<td>人力</td>
+<td>信度效度、IRT、生存分析、回归</td>
+<td>评分准不准、谁会离职、渠道有没有效</td>
+</tr>
+</tbody>
+</table></div>
+<p>这张地图对你的意义不是“全都要学”，而是让你知道自己现在缺的是哪一层；你的招聘漏斗工作最常碰的是 S 层和 A 层的比例、区间，以及实验和回归，但你的 AI 评分和看板工作会把你推向 M7 的一致性、M8 的功效和 M9 的因果，所以十二个模块的顺序应该按“你下周要用什么”排，而不是按教材章节排。</p>
+<h2 id="s3"><span class="hnum">3</span>六问与三棵决策树</h2>
+<p>任何一个场景进来，你先过六个问题，目标是什么、分析单位是谁，以及结果变量是什么类型、分组是独立还是配对、数据是随机还是观察来的、你要的答案是“有没有差异”“多大差异”“能不能预测”还是“能不能归因”；这六个问题不需要背，你把它写在一张纸上，每次卡住就从头过一遍，八成的时间你会发现问题根本不在方法，而在你还没说清楚要回答什么。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>问题</th>
+<th>你要判断什么</th>
+<th>常见错法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>目标</td>
+<td>描述、估计、比较、找关系、判因果还是预测</td>
+<td>目标是估计却去做检验</td>
+</tr>
+<tr>
+<td>分析单位</td>
+<td>一行代表一个人、一次申请还是一周</td>
+<td>把同一人的多条记录当独立样本</td>
+</tr>
+<tr>
+<td>结果类型</td>
+<td>连续、二分类、计数、等级还是时间</td>
+<td>连续结果用卡方</td>
+</tr>
+<tr>
+<td>分组结构</td>
+<td>独立、配对、重复测量还是嵌套</td>
+<td>配对数据拆成两组</td>
+</tr>
+<tr>
+<td>数据来源</td>
+<td>随机分配、观察、抽样还是全量</td>
+<td>观察数据直接说因果</td>
+</tr>
+<tr>
+<td>答案形式</td>
+<td>有没有差异、多大差异、能不能预测、能不能归因</td>
+<td>用 p 值回答“多大”</td>
+</tr>
+</tbody>
+</table></div>
+<p>第一棵树是比较类，你先看结果是连续还是 0/1，连续且两组独立就用 Welch t，连续且同一批人前后测就用配对 t，连续且三组以上就用 ANOVA 或 Welch ANOVA，0/1 且两组独立就看事件数，够大用两比例 z，太小用 Fisher，0/1 且同一批人前后测就用 McNemar，三组以上的比例用卡方，这就是比较类的主干。</p>
+<p>第二棵树是关系与预测，你先问自己要的是解释还是预测，解释就走相关和回归，预测就走验证和误差；结果连续用线性回归，结果二分类用逻辑回归，结果计数用泊松或负二项，数据有嵌套或重复测量就用混合模型，关系明显非线性就先画图再考虑样条或树模型；这一步最常见的错误是拿一个高 R² 的模型当因果结论，或者拿一个高 AUC 的模型当概率校准。</p>
+<p>第三棵树是因果与实验，你先问能不能随机，能随机就做 A/B 或析因设计，不能随机就看有没有政策断点、前后多期数据、可信的工具变量或可匹配的对照；有断点用 RDD，有前后多期且能找到对照组用 DiD，只有一个处理单位用合成控制或中断时间序列，有可信工具用 IV，什么都没有就只能做描述和敏感性分析，不要硬编一个因果故事 <a class="cite" href="#s-S36">S36</a><a class="cite" href="#s-S37">S37</a>。</p>
+<div id="trees-block"></div>
+
+<p>我把同一个场景走两遍给你看，小红书来 18 人 3 人入营，微信来 22 人 5 人入营，如果老板问“两个渠道有没有本质差异”，目标是比较，结果是 0/1，两组独立，事件数很少，所以走 Fisher 精确检验；如果老板问“小红书这个渠道的入营率大概在什么范围”，目标是估计，数据结构没变，但答案要的是区间，所以走 Wilson，而不是同一个检验换个说法。</p>
+<p>咱们把这张地图最常见的四个翻车点钉在这里，第一是把 p&lt;0.05 当成“有效”，忽略了效应量和代价；第二是拿“n&lt;30 就不能用 z”当铁律，实际上要看的是事件数和分布，而不是一个固定的 30；第三是拿卡方去处理所有分类问题，忘了配对要用 McNemar、小样本要用 Fisher；第四是同时看很多指标，看到哪个显著就讲哪个，这正是多重比较和偷看要解决的问题 <a class="cite" href="#s-S38">S38</a><a class="cite" href="#s-S39">S39</a><a class="cite" href="#s-S40">S40</a>。</p>
+<h2 id="s4"><span class="hnum">4</span>五十八张方法卡怎么读</h2>
+<p>每一张卡都按同一个顺序写，第一句是“它回答什么问题”，然后是“什么时候用”“什么时候不能用”“一个带数字的例子”“最常见的两种误用”“失效信号”和“替代方法”；你不需要按顺序读完五十八张，先读 S 层的十几张，遇到具体场景再用筛选器查，这样卡片才是工具，而不是另一本要背的书。</p>
+<div id="cards-block"></div>
+
+<p>卡片里的“失效信号”比定义更值得看，因为真实工作里你不会拿着教材对照，你看到的是区间越界、残差呈漏斗形，两组方差差一倍、匹配后仍有不平衡这些现象，这些现象就是方法在向你报警；你把信号和替代方法连起来记，比记公式更接近专家的工作方式。</p>
+<p>五十八张卡分成两部分，四十八张核心卡挂在十二个模块下，十张行业卡单独放在最后，行业卡只要求你认得出来、知道什么时候该找专家，不要求你手算；这个划分是为了让你在有限时间里把高频判断练熟，而不是把每个方法都学到能推导。</p>
+<h2 id="s5"><span class="hnum">5</span>十二个模块的核心判断</h2>
+<p>M1 描述与分布，你要判断的是“典型水平”到底该用均值还是中位数，以及离散度会不会让两组看起来一样平均其实完全不同；最常见的错法是只报均值不报分布，遇到长尾收入或停留时长就被少数极端值带跑。</p>
+<p>M2 不确定性与区间，你要判断的是这个比例或均值换一批样本会晃多少，以及小样本比例该用 Wilson 还是 Wald；最常见的错法是把 95% 区间读成“真值有 95% 概率在里面”，或者在 0/12 这种数据上硬套 Wald <a class="cite" href="#s-S41">S41</a>。</p>
+<p>M3 两组均值，你先看两组是不是同一批人，再看方差是否接近，再看分布是否离谱；最常见的错法是把配对数据拆成独立样本，或者先做方差齐性检验再决定用哪种 t，这一步本身就会增加错误率。</p>
+<p>M4 比例与列联表，你先数事件数，再决定 z、卡方还是 Fisher，再看是不是配对；最常见的错法是小样本硬套卡方，或者把配对表当独立表算 <a class="cite" href="#s-S31">S31</a>。</p>
+<p>M5 多组与多重，你先问“整体有没有差异”，再问“是谁和谁不同”，最后问“我看了多少个指标”；最常见的错法是 ANOVA 显著后不做校正的两两比较，或者 20 个指标里挑一个 p=0.04 去汇报 <a class="cite" href="#s-S42">S42</a><a class="cite" href="#s-S43">S43</a>。</p>
+<p>M6 相关与回归，你先画散点图，再决定 Pearson 还是 Spearman，再看残差和共线；最常见的错法是把回归系数当因果效应，或者只看 R² 不看诊断 <a class="cite" href="#s-S31">S31</a><a class="cite" href="#s-S52">S52</a>。</p>
+<p>M7 分类与评分，你要区分排序能力、概率校准和评分者一致性三件事，AUC 高不代表概率准，两个评审一致率高不代表 kappa 高；最常见的错法是用 AUC 代替校准，或者只看原始一致率 <a class="cite" href="#s-S46">S46</a><a class="cite" href="#s-S47">S47</a><a class="cite" href="#s-S48">S48</a>。</p>
+<p>M8 实验与功效，你先定指标、样本量和停止规则，再谈显著性；最常见的错法是每天看 p 值、看到 0.04 就停，或者实验后挑一个显著指标讲故事 <a class="cite" href="#s-S29">S29</a><a class="cite" href="#s-S40">S40</a>。</p>
+<p>M9 因果识别，你先问识别假设，再问估计量；平行趋势、排他性限制和断点操纵这些假设不成立时，公式再漂亮也没用 <a class="cite" href="#s-S36">S36</a><a class="cite" href="#s-S37">S37</a>。</p>
+<p>M10 时间序列，你先分解趋势和季节，再用滚动回测选模型，最后给预测区间；最常见的错法是用 R² 评价预测，或者随机打乱时间做交叉验证 <a class="cite" href="#s-S30">S30</a><a class="cite" href="#s-S50">S50</a>。</p>
+<p>M11 分群与降维，你先标准化，再选距离和算法，最后用稳定性和业务解释验证；最常见的错法是把聚类结果当真实类别，或者不标准化就上 k-means。</p>
+<p>M12 贝叶斯与决策，你先写先验和损失函数，再算后验和期望损失；最常见的错法是把“B 优于 A 的概率 90%”说成“B 一定更好”，或者先看完数据再定先验 <a class="cite" href="#s-S49">S49</a>。</p>
+<div id="quiz-block"></div>
+
+<h2 id="s6"><span class="hnum">6</span>六周路线</h2>
+<p>第一周只做 M1 和 M2，把你手上的渠道线索表拿出来，算一次均值、中位数和 P25/P75，再给两个小样本渠道各算一个 Wilson 区间，你要练的是“描述”和“估计”这两个动作，不是背公式。</p>
+<p>第二周做 M3 和 M4，找两组面试评分做一次 Welch t，找两个渠道的入营率做一次 Fisher，再找一批前后测数据做一次 McNemar，你要练的是看数据结构决定检验版本。</p>
+<p>第三周做 M8 和 M5，先算一次样本量，再设计一个两周的文案实验，最后用 Holm 或 BH 处理一次多指标看板，你要练的是“实验前”和“多指标”这两个最容易翻车的环节。</p>
+<p>第四周做 M6 和 M7，用面试分和入职后绩效做一次相关与回归，再用 AI 分级和人工分级做一次 kappa，你要练的是“关系”和“一致性”，而不是又背一遍回归公式。</p>
+<p>第五周做 M9 和 M10，找一个政策或渠道变化做 DiD，找一条 36 个月的线索序列做 STL 和滚动回测，你要练的是识别假设和时间顺序。</p>
+<p>第六周做 M11 和 M12，给申请人做一次聚类，再用贝叶斯后验回答一次“要不要切”；最后用 20 道混合题做一次总测，错题回到对应模块，不要从头再读。</p>
+<p>每天二十分钟，每周一次六十分钟混合测，每周至少把一个方法用在你自己的真实数据上，这是这套路线唯一不能省的部分；你看完地图却不动手，三周后只会剩下“我好像学过”的感觉，而不会剩下判断力。</p>
+<h2 id="s7"><span class="hnum">7</span>证据、限制与怎么继续</h2>
+<p>这份报告的来源分成四类，学习科学和统计教育的论文与元分析，企业实验和行业标准的论文与规范，教材与手册，以及我自己采的 40 条岗位样本；每一类我都标了“读到了什么程度”，摘要在 <code>data/sources.json</code> 的 evidence 字段里写清楚，没读到全文的绝不说成读完了。</p>
+<p>证据最强的是学习技术这一块，练习测试和分散练习，以及工作样例、案例比较和反馈都有元分析或大量实验支持；证据中等的是“交错练习对方法选型的迁移”，因为大多数交错研究是在数学题和归纳分类任务上做的，直接搬到统计方法选择还需要你用自己的错题数据验证 <a class="cite" href="#s-S05">S05</a><a class="cite" href="#s-S08">S08</a>。</p>
+<p>证据最弱的是“全球企业最常用”的排序，我没有全球普查，只有 40 条远程岗位、几本教材的章节结构、几份行业标准和大厂论文；所以我把结论写成 S/A/B/C 分层，而不是“第一名、第二名”，并且明确告诉你，JD 样本偏向远程和英文岗位，制造、医药和公共部门的覆盖不足，这一块要靠行业标准补，而不是靠岗位样本硬撑 <a class="cite" href="#s-S34">S34</a>。</p>
+<p>还有一个限制是效应量的引用，我只在摘要或正文明确给出数字时才写数字，比如案例比较 d=0.50、反馈 d=0.48、智能辅导中位效应 0.66、人类辅导 d=0.79；拿不到数字的地方我只写方向，不编一个看起来精确的值 <a class="cite" href="#s-S08">S08</a><a class="cite" href="#s-S07">S07</a><a class="cite" href="#s-S16">S16</a><a class="cite" href="#s-S17">S17</a>。</p>
+<div id="sources-block"></div>
+
+<p>你点来源表里的链接时，有一部分会看到 403，那是出版社的反爬或付费墙，不是链接失效；我把 DOI、标题、年份和读到哪一层都写在同一行，你可以用学校或图书馆的入口继续查。</p>
+<p>如果你要继续往下走，下一步不是再找十本书，而是从这五十八张卡里挑出你下周真的要用的三张，各做三道题，把错因写下来；等你有了 30 条自己的错题，我们再回来改这份地图，因为那时候我们改的是你的判断，而不是我的文字。</p><p id="ref-r1" class="ref-note">[R1] 见你的复盘《最大的问题是开太多线》，2026-10-28。</p>
+</div></main>
+<script>window.__DATA__ = {"methods":{"modules":[{"id":"M1","name":"描述与分布","en":"Describe","question":"这批数据典型长什么样，极端值会不会骗我？","goal":"先把数据的样子看清楚，再谈任何检验。"},{"id":"M2","name":"不确定性与区间","en":"Estimate","question":"我手上的这个数，到底有多准？","goal":"把点估计变成带误差护栏的区间。"},{"id":"M3","name":"两组均值","en":"Compare means","question":"两组平均值的差，是真差还是抽样波动？","goal":"连续结果、两组比较时选对 t 家族或秩方法。"},{"id":"M4","name":"比例与列联表","en":"Compare proportions","question":"两个比例、两张列联表，差异是真的吗？","goal":"转化率、录取率、通过率这类 0/1 结果的比较。"},{"id":"M5","name":"多组与多重","en":"Many groups","question":"同时比很多组、很多指标，怎么不被假阳性骗？","goal":"三组以上比较与多重检验校正。"},{"id":"M6","name":"相关与回归","en":"Relate","question":"两个变量有关系吗，能不能用一个解释另一个？","goal":"相关、线性回归与诊断。"},{"id":"M7","name":"分类与评分","en":"Classify","question":"一个二分类模型或评分，到底准不准、能不能用？","goal":"逻辑回归、ROC/AUC、校准与评分者一致性。"},{"id":"M8","name":"实验与功效","en":"Experiment","question":"改一版文案/流程，怎么设计才知道有没有用？","goal":"A/B、样本量、序贯、CUPED 与析因设计。"},{"id":"M9","name":"因果识别","en":"Causal","question":"不是随机实验时，怎么尽量把因果效应认出来？","goal":"匹配、DiD、RDD、IV、合成控制。"},{"id":"M10","name":"时间序列","en":"Forecast","question":"下周/下季度会是多少，怎么知道预测靠不靠谱？","goal":"分解、ETS/ARIMA、回测。"},{"id":"M11","name":"分群与降维","en":"Segment","question":"人群能不能分成几类，很多指标能不能压缩？","goal":"聚类、PCA、因子分析。"},{"id":"M12","name":"贝叶斯与决策","en":"Decide","question":"小样本、连续监测、要拍板时，怎么把不确定性变成行动？","goal":"贝叶斯更新、贝叶斯 A/B、决策分析与模拟。"},{"id":"IND","name":"行业专用","en":"Industry-specific","question":"制造、医药、金融、市场研究里那些不常用但关键的方法。","goal":"认得出来、知道什么时候该找专家，不要求你手算。"}],"methods":[{"id":"center","name":"集中趋势","en":"Mean / median / trimmed mean","moduleId":"M1","goals":["describe"],"tier":"S","depth":"deep","answers":"这批数据用哪个数代表最合适，以及这个数会不会被极端值带跑。","dataTypes":["continuous","count"],"nRule":"任何 n 都能算，但 n 越小越要同时看中位数与分位数。","design":["cross-sectional","survey"],"assumptions":["你选的是能代表决策目标的中心：均值对总和敏感，中位数对排序敏感。"],"contraindications":["长尾收入、客单价、停留时长这类分布，均值会被少数极端值拉高。"],"alternatives":["spread","dist","outlier"],"failureSignals":["均值和中位数差得很远","去掉最大的 1% 后均值大幅变化"],"industries":["tech","hr","marketing","finance"],"card":{"what":"均值把每个观测都算进去，中位数只看中间那个位置，截尾均值先丢掉两头再平均。","when":"汇报“典型水平”时，先看分布形状；偏态或极端值多，用中位数并同时报 P25/P75。","notWhen":"要做总额、总成本、总曝光这类加法决策时，均值仍然是对的量，换成中位数反而误导。","example":"10 个候选人的面试分是 60、62、63、65、66、68、70、72、75、98；均值 69.9，中位数 67，后者更能代表“普通人”。","misuse":["只报均值不报分布","把中位数当成“更高级的均值”而不解释它回答的是另一个问题"]},"sources":["S31"]},{"id":"spread","name":"离散度","en":"SD / IQR / CV","moduleId":"M1","goals":["describe"],"tier":"S","depth":"deep","answers":"数据离中心有多远，两组看起来一样平均的人是不是其实差得很不一样。","dataTypes":["continuous","count"],"nRule":"SD 在 n 很小时不稳定；n<10 先看原始值和极差。","design":["cross-sectional","survey"],"assumptions":["SD 假设你用均值做中心；IQR 假设你用中位数做中心。"],"contraindications":["用 CV 比较量纲不同的变量时要小心；它假设均值有意义且不为 0。"],"alternatives":["center","dist","outlier"],"failureSignals":["两组均值几乎一样但 SD 差一倍","SD 大于均值且数据非负"],"industries":["tech","manufacturing","finance","hr"],"card":{"what":"SD 是“离均值普遍多远”，IQR 是“中间一半人跨多宽”，CV 是 SD 除以均值。","when":"比较稳定性、做功效计算、判断一个差异在实际尺度上算不算大，都要先看离散度。","notWhen":"分布严重偏态时，SD 会被长尾放大；这时 IQR 或 MAD 更诚实。","example":"A 渠道客单价均值 300、SD 40；B 渠道均值 300、SD 180。B 的均值同样漂亮，但单笔风险大得多。","misuse":["只比均值不比方差","把 CV 用在均值接近 0 的数据上"]},"sources":["S31"]},{"id":"dist","name":"分布诊断","en":"Histogram / QQ / skewness","moduleId":"M1","goals":["describe"],"tier":"A","depth":"deep","answers":"这份数据像不像正态，尾巴有多重，能不能直接套后面的正态近似。","dataTypes":["continuous","count"],"nRule":"QQ 图在 n<30 时很难读；小样本优先看原始值和领域知识。","design":["cross-sectional"],"assumptions":["图形诊断是判断，不是检验；不要用“正态性检验 p>0.05”代替看分布。"],"contraindications":["离散计数、明显双峰、混合了两个人群的数据，不该硬套单峰分布。"],"alternatives":["center","spread","bootstrap"],"failureSignals":["直方图双峰","QQ 图两端大幅偏离","偏度绝对值>1 且样本不大"],"industries":["tech","manufacturing","finance","research"],"card":{"what":"直方图看形状，QQ 图看尾巴，偏度/峰度给一个粗略数字。","when":"在选 t 检验、正态近似、回归之前，先确认分布有没有离谱到不能用。","notWhen":"n 很大时，轻微偏离正态几乎不影响 t 检验；这时图形诊断别变成拖延借口。","example":"候选人等待天数：多数 1–7 天，少数 60 天以上；直方图右偏，均值 8.4、中位数 4，这时报中位数更合理。","misuse":["把“正态性检验不显著”当成数据正态","看到右偏就立刻做 log 变换而不解释"]},"sources":["S31"]},{"id":"outlier","name":"异常值识别","en":"IQR rule / z-score / robust","moduleId":"M1","goals":["describe"],"tier":"A","depth":"deep","answers":"哪些点该单独看，哪些点其实是真实的长尾而不是错误。","dataTypes":["continuous","count"],"nRule":"IQR 规则在 n<20 时阈值很粗，只当提示。","design":["cross-sectional","time-series"],"assumptions":["异常值规则假设分布单峰；混合人群会把正常值判成异常。"],"contraindications":["不要自动删除异常值；先判断它是录入错误、另一个机制，还是真实现象。"],"alternatives":["dist","robust-regression","spc"],"failureSignals":["删除异常值后结论反转","异常值集中在某个渠道/某一天"],"industries":["tech","manufacturing","finance","hr"],"card":{"what":"IQR 规则把超出 Q1−1.5×IQR 或 Q3+1.5×IQR 的点标出来；z 分数用均值和 SD；稳健方法用中位数和 MAD。","when":"数据清洗、看板异常告警、回归前检查影响点，都该先做一遍。","notWhen":"长尾业务（收入、曝光、停留）天然有极端值；把它们全删掉等于删掉业务最重要的部分。","example":"1000 条线索里 6 条手机号长度异常，先查录入；另有 3 条是团购客户，金额高但真实，不能删。","misuse":["用 3σ 规则处理强偏态数据","把异常值删掉后不报告删了多少"]},"sources":["S31","S52"]},{"id":"se","name":"标准误","en":"Standard error","moduleId":"M2","goals":["estimate"],"tier":"S","depth":"deep","answers":"我算出来的这个比例/均值，换一批样本会晃多少。","dataTypes":["continuous","binary","count"],"nRule":"比例的标准误要检查 np 与 n(1−p) 是否够大；均值要检查样本是否独立。","design":["independent","survey","randomized"],"assumptions":["观测独立","样本能代表目标总体","统计量的抽样分布近似已知"],"contraindications":["整群抽样、重复计数、非概率样本，标准误会被低估。"],"alternatives":["bootstrap","wald","wilson"],"failureSignals":["SE 小得和 n 不成比例","同一个人的多条记录被当成独立样本"],"industries":["tech","hr","marketing","public"],"card":{"what":"标准误是统计量自己的标准差，不是原始数据的标准差；它随 √n 缩小。","when":"任何区间、检验、样本量计算的起点；汇报“这个数有多准”时先讲 SE。","notWhen":"抽样不是独立的，或者你要描述的是个体差异而不是估计精度。","example":"n=100，p̂=20%，SE≈4%；n 变成 400，SE 只降到 2%，不是 1%。","misuse":["把 SD 和 SE 混着说","以为样本量翻倍误差就减半"]},"sources":["S31"]},{"id":"wald","name":"Wald 区间","en":"Wald confidence interval","moduleId":"M2","goals":["estimate"],"tier":"S","depth":"deep","answers":"用“估计值 ± 1.96×标准误”快速给一个误差范围。","dataTypes":["continuous","binary"],"nRule":"比例在 n 小、p 接近 0/1 时会越界；均值在 n≥30 或分布不太偏时较稳。","design":["independent","randomized","survey"],"assumptions":["估计量近似正态","SE 估计可靠","样本独立"],"contraindications":["0/12、12/12 这类极端比例","强偏态且小样本","整群抽样"],"alternatives":["wilson","bootstrap","bayes-update"],"failureSignals":["区间下限<0 或上限>1","区间宽度和 n 对不上"],"industries":["tech","finance","consulting"],"card":{"what":"最常见的区间公式：点估计加减 1.96 个标准误。","when":"均值、大样本比例、回归系数的快速区间；作为默认起点可以，但要检查边界。","notWhen":"小样本比例或极端比例，Wald 的覆盖会明显偏离 95%。","example":"2/12 的 Wald 95% 区间约为 −4% 到 38%，负的下限说明这个公式在这里不该用。","misuse":["把 95% 读成“真值有 95% 概率落在里面”","对 0/12 直接套公式"]},"sources":["S31","S41"]},{"id":"wilson","name":"Wilson / Clopper-Pearson","en":"Wilson score / exact interval","moduleId":"M2","goals":["estimate"],"tier":"S","depth":"deep","answers":"小样本比例到底可能落在哪个范围，而且不会给出负的下限。","dataTypes":["binary"],"nRule":"n<30 或 np<5 时优先 Wilson；需要保守保证时用 Clopper-Pearson。","design":["independent","survey"],"assumptions":["观测独立","样本来自目标总体","比例定义在抽样期间不变"],"contraindications":["整群抽样且群内相关强","非概率样本","一个人被重复计数"],"alternatives":["wald","bootstrap"],"failureSignals":["Wald 越界但 Wilson 正常","n 很小却报出很窄的区间"],"industries":["tech","hr","marketing","public"],"card":{"what":"Wilson 把区间中心往 0.5 拉一点，再用 z 和 n 修正宽度；Clopper-Pearson 用精确二项分布，通常更保守。","when":"录取率、转化率、通过率这类比例，尤其 n 小或接近 0/1。","notWhen":"数据不是随机样本，或者你要估计的是加权后的总体比例（那是另一套方差）。","example":"2/12 的 Wilson 95% 区间约 5%–45%，比 Wald 的 −4%–38% 更像人话。","misuse":["把 Wilson 当成贝叶斯后验","只报区间不报 n 和事件数"]},"sources":["S31","S41"]},{"id":"bootstrap","name":"Bootstrap 区间","en":"Bootstrap confidence interval","moduleId":"M2","goals":["estimate"],"tier":"A","depth":"deep","answers":"分布很怪、公式不好推的时候，怎么用重抽样给一个误差范围。","dataTypes":["continuous","binary","count","time"],"nRule":"n 至少几十；太小则重抽样世界和真实世界差太远。","design":["independent","survey","time-series"],"assumptions":["样本能代表总体","观测可交换（时间序列要用块 bootstrap）","统计量在重抽样下稳定"],"contraindications":["强依赖顺序的时间序列直接按行重抽","整群/分层结构不保留","极端小样本"],"alternatives":["wald","wilson","permutation"],"failureSignals":["bootstrap 分布严重偏斜或双峰","百分位区间和 BCa 差很多"],"industries":["tech","finance","research","hr"],"card":{"what":"从样本里有放回地抽同样大的样本，重复几千次，得到统计量的经验分布，再取分位数。","when":"中位数、比值、R²、AUC、分组差异这类没有简单标准误的统计量。","notWhen":"样本不能代表总体；这时 bootstrap 只会把偏差放大得很精确。","example":"500 条线索的转化率中位数差异，重抽 5000 次，2.5% 与 97.5% 分位点就是 95% 区间。","misuse":["把 bootstrap 当成“不需要假设”","时间序列按行重抽破坏自相关"]},"sources":["S45","S19"]},{"id":"permutation","name":"置换检验","en":"Permutation test","moduleId":"M2","goals":["compare","estimate"],"tier":"A","depth":"deep","answers":"不想假设分布形状时，把标签打乱很多次，看看真实差异有多罕见。","dataTypes":["continuous","binary","count"],"nRule":"n 至少十几；组合数少时可以枚举，不靠随机。","design":["independent","randomized"],"assumptions":["可交换性（没有干预时标签可互换）","随机分配/抽样","统计量已定"],"contraindications":["配对/区组结构未保留","时间序列/空间相关","观察性数据有混杂"],"alternatives":["bootstrap","rank-tests","ab-test"],"failureSignals":["置换分布双峰","不同随机种子 p 值波动大","配对结构被忽略"],"industries":["tech","research","pharma","hr"],"card":{"what":"把两组标签随机打乱，重算差异，重复几千次，看真实差异在置换分布里的位置。","when":"小样本、分布不明、统计量不是均值（比值、中位数、AUC）；也是 A/B 的兜底。","notWhen":"观察性数据有混杂，或数据结构有配对/区组没保留。","example":"A 组 8 人、B 组 9 人的转化差异，置换 5000 次，p≈0.04；不依赖正态近似。","misuse":["把置换检验当“无假设”","配对数据按独立标签打乱"]},"sources":["S31","S19"]},{"id":"onesample-t","name":"单样本 t / z","en":"One-sample t-test","moduleId":"M3","goals":["compare"],"tier":"A","depth":"deep","answers":"这一组数据的平均值，和某个目标值/历史值差得够不够远。","dataTypes":["continuous"],"nRule":"n<30 用 t；n 大且分布不太偏时 t 与 z 几乎一样。","design":["independent","cross-sectional"],"assumptions":["观测独立","近似正态或 n 足够大","目标值是事先定的，不是看完数据再挑的"],"contraindications":["同一人被重复测量","目标值来自同一批数据","强偏态小样本"],"alternatives":["rank-tests","bootstrap","wald"],"failureSignals":["结论随一个极端值翻转","目标值其实是从数据里反推的"],"industries":["manufacturing","hr","finance"],"card":{"what":"看样本均值离假设值有几个标准误，再用 t 分布算概率。","when":"有明确基准（历史均值、规格值、合同值），且你只关心一组数据。","notWhen":"你要比的是两组，或者数据是配对/重复测量；那就换独立或配对 t。","example":"新流程 25 个订单平均 4.2 天，历史均值 5 天，SD 1.1；t≈−3.6，df=24，p<0.01。","misuse":["把“和历史比”当成“和随机对照比”","忽略独立性"]},"sources":["S31"]},{"id":"welch-t","name":"独立样本 t / Welch","en":"Independent / Welch t-test","moduleId":"M3","goals":["compare"],"tier":"S","depth":"deep","answers":"两组互不相干的人，平均值差得够不够远。","dataTypes":["continuous"],"nRule":"每组至少十几；方差不齐、样本量不等时直接用 Welch。","design":["independent","randomized","observational"],"assumptions":["两组独立","连续结果","近似正态或每组 n 足够大"],"contraindications":["同一个人出现在两组","结果是有序等级且样本小","极端偏态"],"alternatives":["rank-tests","bootstrap","anova"],"failureSignals":["两组 SD 差很多但仍用等方差 t","一组有极端值","分组不是互斥的"],"industries":["tech","hr","manufacturing","pharma"],"card":{"what":"比较两个独立组的均值差，Welch 版不假设两组方差相等。","when":"A/B 两组连续指标、两种面试评分、两个班成绩；默认先用 Welch。","notWhen":"配对/前后测（用配对 t），或三组以上（用 ANOVA）。","example":"A 组 40 人平均 6.1 分、SD 1.5；B 组 35 人平均 5.6 分、SD 0.9；Welch t≈1.8，p≈0.08，不能下“有差异”的结论。","misuse":["先做方差齐性检验再决定用哪种 t（这一步本身会引入问题）","把 p=0.08 说成“没有差异”"]},"sources":["S31"]},{"id":"paired-t","name":"配对 t","en":"Paired t-test","moduleId":"M3","goals":["compare"],"tier":"A","depth":"deep","answers":"同一批人前后两次、或一对一对匹配的两个值，平均差是不是真的不为零。","dataTypes":["continuous"],"nRule":"看的是“对数/人数”，不是总观测数；至少十几对。","design":["paired","repeated"],"assumptions":["配对有意义","差值近似正态或对数足够多","两次测量之间没有其他系统性变化"],"contraindications":["配对是硬凑的","前后测之间发生了别的干预","差值强偏态"],"alternatives":["rank-tests","welch-t","mcnemar"],"failureSignals":["配对相关系数很低","把配对数据当独立样本算"],"industries":["hr","pharma","manufacturing","tech"],"card":{"what":"先算每个人的差值，再检验差值的均值是否为 0。","when":"同一批人改版前后、同一批样本两种检测方法、双胞胎/匹配对。","notWhen":"两组人不是同一批，也不是有意匹配的；这时配对 t 会虚增检验力。","example":"30 人培训前后测试，平均提高 4.2 分，差值 SD 6.0；t≈3.8，df=29，p<0.001。","misuse":["把配对数据拆成两组做独立 t","忽略顺序效应/练习效应"]},"sources":["S31"]},{"id":"rank-tests","name":"Mann-Whitney / Wilcoxon","en":"Rank-based tests","moduleId":"M3","goals":["compare"],"tier":"A","depth":"deep","answers":"数据是有序等级、或分布太偏时，两组的位置差是不是真的。","dataTypes":["ordinal","continuous"],"nRule":"每组至少 8–10 个才有像样的检验力；更小只能描述。","design":["independent","paired"],"assumptions":["独立（Mann-Whitney）或配对（Wilcoxon）","分布形状大致相同（否则只检验位置/随机优势）"],"contraindications":["两组分布形状差异很大时，别把它解释成“中位数差”","大量并列值"],"alternatives":["welch-t","paired-t","bootstrap"],"failureSignals":["把它当成“中位数检验”","分布形状一组偏一组长"],"industries":["hr","pharma","research","public"],"card":{"what":"把两组数值合起来排秩，看一组的秩是否系统性偏高。","when":"李克特量表、评分等级、明显偏态且样本不大、有极端值。","notWhen":"你真正要比较的是均值，且分布近似正态；这时 t 检验更有检验力。","example":"面试官 A 给 15 人打分（1–5），B 给 14 人打分；用 Mann-Whitney 比较秩分布，p=0.03。","misuse":["把“不显著”说成“两组一样”","忽略并列值对 p 值的影响"]},"sources":["S31"]},{"id":"two-prop-z","name":"两比例 z 检验","en":"Two-proportion z-test","moduleId":"M4","goals":["compare"],"tier":"S","depth":"deep","answers":"两个渠道/两版文案的转化率差，是不是超过了抽样波动。","dataTypes":["binary"],"nRule":"每组 np 与 n(1−p) 至少 5–10；不满足就换 Fisher。","design":["independent","randomized"],"assumptions":["两组独立","每个人只算一次","样本量足够做正态近似"],"contraindications":["同一批人前后比较（用 McNemar）","小样本/极端比例","整群抽样"],"alternatives":["fisher","chi-square","wilson","sequential"],"failureSignals":["事件数很少但硬套 z","转化定义在两组不一致"],"industries":["tech","marketing","hr","consulting"],"card":{"what":"把两个比例合成一个 pooled 比例，算标准误，再看差值有几个标准误。","when":"A/B 两组转化率、两个渠道录取率、两种话术回复率。","notWhen":"事件数太少、比例接近 0/1，或两组不是独立的人。","example":"3/18（16.7%）对 5/22（22.7%）：差 6 个百分点，但 z≈−0.48，p≈0.63，样本不够。","misuse":["只看百分比差，不看 n","把 p=0.63 说成“两组一样”"]},"sources":["S31"]},{"id":"chi-square","name":"卡方独立性 / 齐性","en":"Chi-square test","moduleId":"M4","goals":["compare"],"tier":"S","depth":"deep","answers":"两个分类变量是不是有关，或者几个组的比例是不是一致。","dataTypes":["categorical","count"],"nRule":"期望频数<5 的格子不能太多（通常<20%）；否则用 Fisher/精确法。","design":["independent","cross-sectional","survey"],"assumptions":["观测独立","分类互斥且穷尽","期望频数足够大"],"contraindications":["配对数据（用 McNemar）","有序分类硬当无序","同一人多次计数"],"alternatives":["fisher","two-prop-z","mcnemar"],"failureSignals":["大量期望频数<5","拒绝后不知道哪一格贡献最大"],"industries":["tech","marketing","hr","public"],"card":{"what":"比较观察频数和“如果无关会怎样”的期望频数，算 Σ(O−E)²/E。","when":"渠道×是否转化、性别×是否通过、地区×偏好；三组以上比例比较。","notWhen":"2×2 且样本小（Fisher 更稳），或数据是配对的（McNemar）。","example":"4 个渠道×是否录取的 2×4 表，χ²=9.8，df=3，p=0.02；说明至少有一个渠道不同，但还要看残差找是谁。","misuse":["把卡方显著当成“所有组都不同”","期望频数太小仍硬算"]},"sources":["S31"]},{"id":"fisher","name":"Fisher 精确检验","en":"Fisher's exact test","moduleId":"M4","goals":["compare"],"tier":"S","depth":"deep","answers":"样本很小、事件数很少时，两个比例/两张表有没有关联。","dataTypes":["binary","categorical"],"nRule":"2×2 且期望频数<5，或总样本<30 时优先。","design":["independent","randomized"],"assumptions":["行与列固定","观测独立","2×2 或小表"],"contraindications":["大样本（计算慢且过度保守）","配对数据","非 2×2 的大表（用 Fisher-Freeman-Halton）"],"alternatives":["chi-square","two-prop-z","mcnemar"],"failureSignals":["大样本仍用 Fisher，p 值偏大","把 Fisher 当成“更高级的卡方”"],"industries":["pharma","hr","tech","public"],"card":{"what":"固定边际后，枚举所有更极端的表，累加概率；不依赖大样本近似。","when":"小样本 2×2、罕见事件、试验组只有几个人。","notWhen":"样本充足时它过于保守，会漏掉真实差异。","example":"A 组 1/8 成功，B 组 5/9 成功；Fisher p≈0.13，不能下结论。","misuse":["只看 p 不看效应量","把“不显著”当“无差异”"]},"sources":["S31"]},{"id":"mcnemar","name":"McNemar 配对比例","en":"McNemar's test","moduleId":"M4","goals":["compare"],"tier":"A","depth":"deep","answers":"同一批人前后两次的 0/1 结果，变化是不是真的偏向一边。","dataTypes":["binary"],"nRule":"只看不一致的对数（b+c）；至少十几对。","design":["paired","repeated"],"assumptions":["配对有意义","不一致的对足够多","两次测量互相独立（除配对外）"],"contraindications":["两组是不同的人","不一致对数太少","顺序/练习效应明显"],"alternatives":["paired-t","chi-square","fisher"],"failureSignals":["总样本很大但不一致只有 3 对","把配对表当独立卡方算"],"industries":["hr","pharma","tech","public"],"card":{"what":"把前后变化拆成“变好”和“变坏”两类，检验这两个数是否对称。","when":"同一批人改版前后是否通过、同一批样本两种检测的阳性/阴性。","notWhen":"两组不是同一批人；这时用独立比例检验。","example":"100 人改版前后：20 人由失败变通过，5 人由通过变失败；McNemar χ²≈7.8，p<0.01。","misuse":["把配对数据做成 2×2 独立卡方","忽略不一致对数太少"]},"sources":["S31"]},{"id":"anova","name":"单因素 ANOVA","en":"One-way ANOVA","moduleId":"M5","goals":["compare"],"tier":"S","depth":"deep","answers":"三个以上组的平均值，整体上有没有差异。","dataTypes":["continuous"],"nRule":"每组至少十几；组数越多，每组需要的 n 越大。","design":["independent","randomized"],"assumptions":["组间独立","组内近似正态","方差大致相等（不相等用 Welch ANOVA）"],"contraindications":["重复测量/配对（用混合模型）","强偏态小样本（用 Kruskal-Wallis）","方差不齐"],"alternatives":["welch-anova","kruskal","welch-t","multiplicity"],"failureSignals":["ANOVA 显著但事后比较全不显著","一组方差远大于其他组"],"industries":["pharma","manufacturing","hr","tech"],"card":{"what":"把总变异拆成组间和组内，算 F=组间均方/组内均方。","when":"4 个渠道的转化率（连续指标）、3 种培训方式的分数、多个供应商的交付天数。","notWhen":"两组（用 t）、配对（用重复测量）、方差不齐（用 Welch）。","example":"三组均值 6.1/6.4/7.0，组内 SD 1.2，每组 30；F≈4.4，p≈0.015，说明至少一组不同。","misuse":["ANOVA 显著后不做事后比较就宣布“都不同”","把重复测量当独立组"]},"sources":["S31"]},{"id":"welch-anova","name":"Welch ANOVA / Games-Howell","en":"Welch ANOVA","moduleId":"M5","goals":["compare"],"tier":"A","depth":"deep","answers":"几组方差不齐、样本量也不等时，整体差异还成不成立。","dataTypes":["continuous"],"nRule":"每组至少十几；小样本+方差不齐最需要它。","design":["independent","observational"],"assumptions":["组间独立","近似正态","允许方差不齐"],"contraindications":["配对/重复测量","极端偏态小样本"],"alternatives":["anova","kruskal","multiplicity"],"failureSignals":["最大 SD 是最小 SD 的 3 倍以上","各组 n 相差很大"],"industries":["hr","manufacturing","tech","public"],"card":{"what":"ANOVA 的稳健版本，用每组的方差分别估计，再近似 F 分布；事后用 Games-Howell。","when":"各组人数和波动差异明显，比如不同渠道的线索量。","notWhen":"方差齐且样本量平衡时，普通 ANOVA 更有检验力。","example":"三组 SD 0.8/1.2/2.5，n 20/35/18；普通 ANOVA 的 p 偏乐观，Welch 更可信。","misuse":["先做方差齐性检验再二选一（会增加错误率）","事后仍用等方差的事后法"]},"sources":["S31"]},{"id":"kruskal","name":"Kruskal-Wallis","en":"Kruskal-Wallis test","moduleId":"M5","goals":["compare"],"tier":"A","depth":"deep","answers":"三组以上、等级数据或强偏态时，组间位置有没有差异。","dataTypes":["ordinal","continuous"],"nRule":"每组至少 8–10；更小只能描述。","design":["independent"],"assumptions":["组间独立","分布形状大致相同（否则只检验随机优势）"],"contraindications":["配对/重复测量","分布形状差异很大","大量并列"],"alternatives":["anova","welch-anova","rank-tests"],"failureSignals":["显著后不知道哪组高","把结果解释成“中位数都不同”"],"industries":["hr","pharma","public","research"],"card":{"what":"把所有值排秩，比较各组的平均秩；ANOVA 的非参数版本。","when":"李克特量表、评分等级、明显偏态且样本不大。","notWhen":"分布近似正态且你要比较均值；ANOVA 更有检验力。","example":"三种面试流程的 1–5 分评价，各 25 人；H≈7.2，df=2，p≈0.027。","misuse":["把它当“中位数 ANOVA”","显著后不做成对比较"]},"sources":["S31"]},{"id":"multiplicity","name":"多重比较校正","en":"Holm / Benjamini-Hochberg","moduleId":"M5","goals":["compare","decide"],"tier":"S","depth":"deep","answers":"同时看很多指标/很多组时，怎么防止“碰巧显著”被当成发现。","dataTypes":["continuous","binary","count"],"nRule":"检验数越多，校正越重要；20 个指标看 1 个显著，先怀疑假阳性。","design":["randomized","observational","survey"],"assumptions":["检验族要事先定义","p 值有效","校正方法匹配目标（FWER 还是 FDR）"],"contraindications":["把探索性分析硬套成确证性检验","事后挑检验族"],"alternatives":["anova","fisher","sequential"],"failureSignals":["20 个指标里恰好 1 个 p=0.04","校正后所有结果都消失但效应量很大"],"industries":["tech","pharma","finance","hr"],"card":{"what":"Bonferroni/Holm 控制族错误率，BH 控制假发现比例；后者在探索性多指标场景更有检验力。","when":"看板同时盯很多细分指标、多组两两比较、多端点试验。","notWhen":"只做一个预先指定的检验；这时校正只会白白损失检验力。","example":"20 个渠道指标，最小 p=0.04；BH 校正后阈值约 0.0025，这个结果不算发现。","misuse":["把校正当成“让结果不显著”的工具","先看数据再决定检验族"]},"sources":["S42","S43","S40"]},{"id":"correlation","name":"相关","en":"Pearson / Spearman correlation","moduleId":"M6","goals":["associate"],"tier":"S","depth":"deep","answers":"两个变量是不是同向/反向变化，强度多大。","dataTypes":["continuous","ordinal"],"nRule":"n<30 时相关系数很不稳；异常值能把它拉到 ±1。","design":["cross-sectional","observational"],"assumptions":["Pearson 假设线性关系与近似正态；Spearman 只看单调关系"],"contraindications":["非线性关系","异常值主导","把相关当因果"],"alternatives":["linear-regression","rank-tests","dist"],"failureSignals":["散点图是 U 形但 r≈0","去掉一个点后 r 大变"],"industries":["hr","finance","marketing","research"],"card":{"what":"Pearson 衡量线性相关，Spearman 先把值换成秩再算，抗异常值、能抓单调非线性。","when":"先看两个连续/有序变量有没有一起动的迹象，再决定要不要建模。","notWhen":"关系明显非线性，或数据有强异常值；先画散点图。","example":"面试分与入职后绩效：Pearson r=0.18，Spearman ρ=0.31；后者更高，说明关系更像单调而非线性。","misuse":["用 r 的大小判断因果","不看散点图就报相关系数"]},"sources":["S31"]},{"id":"linear-regression","name":"多元线性回归","en":"Multiple linear regression","moduleId":"M6","goals":["associate","predict"],"tier":"S","depth":"deep","answers":"在控制其他变量后，一个变量变化一个单位，结果平均变多少。","dataTypes":["continuous"],"nRule":"经验上每个自变量至少 10–20 个观测；预测任务要看验证集。","design":["cross-sectional","observational","randomized"],"assumptions":["线性","误差独立","同方差","误差近似正态（推断时）","自变量不共线"],"contraindications":["结果是有界比例/计数（用 GLM）","强共线","外推到数据范围外"],"alternatives":["logistic","robust-regression","regression-diagnostics","mixed-model"],"failureSignals":["系数符号和单变量相关相反","VIF>10","残差呈漏斗形"],"industries":["finance","hr","marketing","public"],"card":{"what":"用一组自变量线性地预测结果，系数是“控制其他变量后的平均变化”。","when":"解释关系、做调整后的组间比较、简单预测。","notWhen":"结果二分类/计数、关系强非线性、数据有嵌套结构。","example":"控制渠道与岗位后，内推候选人的面试通过率仍高 6 个百分点，系数 0.06，95% CI [0.02, 0.10]。","misuse":["把系数当因果效应","只看 R² 不看残差与共线"]},"sources":["S31"]},{"id":"regression-diagnostics","name":"回归诊断","en":"Residual / VIF / influence","moduleId":"M6","goals":["associate","predict"],"tier":"A","depth":"deep","answers":"这个回归结果能不能信：残差有没有结构、有没有点在主导结论。","dataTypes":["continuous"],"nRule":"诊断在小样本里更关键；n<50 时一个影响点就能翻转系数。","design":["cross-sectional","observational"],"assumptions":["模型形式正确","误差独立同方差","没有强影响点","自变量不共线"],"contraindications":["诊断不是走流程；发现问题要改模型或解释，不是只报告"],"alternatives":["robust-regression","linear-regression","logistic"],"failureSignals":["残差 vs 拟合值呈 U 形/漏斗","Cook's D 有个别点远大于 1","VIF>10"],"industries":["finance","hr","marketing","public"],"card":{"what":"看残差图、QQ 图、VIF、Cook's D，判断线性/同方差/独立性/影响点是否成立。","when":"任何要拿回归系数做解释或决策的时候。","notWhen":"纯预测任务且交叉验证表现稳定；诊断仍要做，但优先级低于样本外误差。","example":"客单价回归的残差呈漏斗，说明误差随均值变大；改用 log 或稳健标准误。","misuse":["只报 R² 和 p 值","发现异方差后不做任何处理"]},"sources":["S31","S52"]},{"id":"robust-regression","name":"稳健 / 分位数回归","en":"Robust / quantile regression","moduleId":"M6","goals":["associate","predict"],"tier":"B","depth":"deep","answers":"异常值很多、或你关心的不是平均值而是中位数/高分位时，怎么估关系。","dataTypes":["continuous"],"nRule":"异常值比例高时优先；分位数回归在尾部需要更多数据。","design":["cross-sectional","observational"],"assumptions":["稳健回归降低异常值影响；分位数回归不假设误差分布"],"contraindications":["你要估计的是均值且异常值是真实业务信号","样本太小估尾部分位数"],"alternatives":["linear-regression","regression-diagnostics","rank-tests"],"failureSignals":["OLS 系数被少数点主导","均值回归与中位数回归结论相反"],"industries":["finance","hr","marketing","public"],"card":{"what":"稳健回归用 Huber/分位数损失降低极端值权重；分位数回归估第 10/50/90 分位的关系。","when":"收入、客单价、停留时长这类长尾结果，或政策更关心尾部人群。","notWhen":"异常值本身就是你要研究的对象；这时删掉/降权会丢掉问题。","example":"收入回归：OLS 说培训带来 +8%，中位数回归说 +3%，差异来自高收入少数人。","misuse":["把稳健回归当“自动正确”","不比较 OLS 与稳健结果就下结论"]},"sources":["S52"]},{"id":"logistic","name":"逻辑回归","en":"Logistic regression","moduleId":"M7","goals":["associate","predict"],"tier":"S","depth":"deep","answers":"哪些因素和二分类结果有关，以及在控制其他变量后一个因素改变多少会改变几率。","dataTypes":["binary"],"nRule":"每个自变量至少 10–20 个事件（不是样本数）；稀有事件需要更多。","design":["cross-sectional","observational","randomized"],"assumptions":["对数几率与自变量线性","观测独立","没有严重共线","没有完全分离"],"contraindications":["结果不是二分类","样本里事件极少","用系数大小直接当因果效应"],"alternatives":["linear-regression","roc","calibration","mixed-model"],"failureSignals":["系数标准误巨大（完全分离）","预测概率集中在 0/1","AUC 高但校准差"],"industries":["finance","hr","tech","pharma"],"card":{"what":"把线性预测值压到 0–1 的 S 曲线上，系数取指数后是优势比。","when":"是否录取、是否违约、是否点击、是否通过；需要调整混杂或做风险评分。","notWhen":"你要预测的是连续值或计数；或者事件太少，模型估不稳。","example":"1000 名申请人、100 人被录取；控制渠道后，内推的录取优势比 OR=2.1，95% CI [1.3, 3.4]。","misuse":["把 OR 当风险比","只看 AUC 不看校准与决策阈值"]},"sources":["S46","S31"]},{"id":"roc","name":"ROC / AUC / PR","en":"ROC, AUC and precision-recall","moduleId":"M7","goals":["predict"],"tier":"A","depth":"deep","answers":"这个评分把好人和坏人分开的能力有多强，换个阈值会怎样。","dataTypes":["binary"],"nRule":"少数类很稀少时 AUC 会显得过于乐观，改看 PR 曲线。","design":["cross-sectional","predictive"],"assumptions":["有一个连续的分数/概率","标签可靠","测试集独立于训练集"],"contraindications":["正负样本极度不平衡","你真正关心的是固定阈值下的收益/成本","标签有噪声"],"alternatives":["calibration","logistic","agreement"],"failureSignals":["AUC 0.9 但业务阈值下精确率很低","训练集和测试集 AUC 差很多"],"industries":["finance","hr","tech","pharma"],"card":{"what":"ROC 画遍所有阈值的 TPR 对 FPR，AUC 是曲线下面积；PR 曲线更适合稀有事件。","when":"比较几个评分/模型的排序能力，或在固定召回下选阈值。","notWhen":"你要知道“预测 20% 的人里实际有多少会转化”；那是校准问题。","example":"AUC=0.78 说明随机抽一个正例和一个负例，正例分数更高的概率是 78%。","misuse":["把 AUC 当准确率","不平衡数据只看 ROC"]},"sources":["S46","S31"]},{"id":"calibration","name":"校准","en":"Calibration","moduleId":"M7","goals":["predict"],"tier":"A","depth":"deep","answers":"模型说 20% 的时候，现实里是不是真的 20%。","dataTypes":["binary"],"nRule":"每个概率桶至少几十个样本；尾部桶要更多。","design":["cross-sectional","predictive"],"assumptions":["有可靠的标签","测试集独立","概率定义与使用场景一致"],"contraindications":["你只需要排序而不需要概率","样本选择偏差严重"],"alternatives":["roc","logistic","decision-monte-carlo"],"failureSignals":["校准曲线整体高于/低于对角线","高分段严重高估"],"industries":["finance","hr","tech","pharma"],"card":{"what":"把预测概率分桶，比较每桶的平均预测值和实际发生率；也可算 Brier score。","when":"概率要拿来定预算、定人力、算期望收益时；AUC 高不代表校准好。","notWhen":"只做排序（比如取前 100 名）且不关心绝对概率。","example":"模型预测 20%–30% 的一桶人，实际转化 12%；说明高估，按这个概率排人力会亏。","misuse":["用 AUC 代替校准","在训练集上画校准曲线"]},"sources":["S46","S31"]},{"id":"agreement","name":"评分者一致性","en":"Cohen's kappa / ICC","moduleId":"M7","goals":["associate","decide"],"tier":"A","depth":"deep","answers":"两个评审/两套标准给同一批人打分，结果到底有多一致。","dataTypes":["categorical","ordinal","continuous"],"nRule":"分类一致性每格至少几十个样本；ICC 至少 30–50 个对象。","design":["cross-sectional","repeated"],"assumptions":["评分对象相同","评分独立","分类是互斥的"],"contraindications":["基数率极端时 kappa 会很低但原始一致率很高","连续评分用 kappa"],"alternatives":["correlation","calibration","reliability"],"failureSignals":["原始一致率 90% 但 kappa 0.3","ICC 与 Pearson r 差很多"],"industries":["hr","pharma","research","tech"],"card":{"what":"kappa 扣除“碰巧一致”后衡量分类一致；ICC 用于连续评分的方差分解。","when":"两个面试官分级、AI 与人工分级、两位医生读片。","notWhen":"类别极度不平衡（kappa 悖论）；这时同时报一致率和 PABAK。","example":"100 人分级，两人一致 85 例，但 kappa≈0.52；因为 80% 都是“普通”，碰巧一致本来就高。","misuse":["只报一致率不报 kappa","把 kappa 0.5 说成“基本一致”而不看场景"]},"sources":["S47","S48"]},{"id":"ab-test","name":"A/B 随机实验","en":"Randomized controlled experiment","moduleId":"M8","goals":["causal","compare"],"tier":"S","depth":"deep","answers":"改一版文案/流程，随机分给两组，差异是不是改版带来的。","dataTypes":["binary","continuous","count"],"nRule":"先算样本量；不要边跑边看 p 值。","design":["randomized"],"assumptions":["随机分配","两组只差在干预","指标预先定义","分析计划预先定"],"contraindications":["分流不均匀","互相干扰（社交网络/共享库存）","中途改指标或提前停"],"alternatives":["power","sequential","cuped","did"],"failureSignals":["样本比例失衡（SRM）","实验期间有外部大事件","指标在实验前就差异很大"],"industries":["tech","marketing","hr","consulting"],"card":{"what":"把单位随机分到对照/实验组，比较同一时间窗内的指标差异。","when":"产品改版、文案、价格、流程；只要能随机分配且不互相污染。","notWhen":"不能随机（政策、地区）、或两组会互相影响（同一市场抢量）。","example":"两组各 5000 人，转化 10.0% vs 10.5%，z≈0.8，p≈0.4；不是没效果，是功效不够。","misuse":["看到 p<0.05 就停","实验后挑一个显著指标讲故事"]},"sources":["S25","S27","S29"]},{"id":"power","name":"功效与样本量","en":"Power and sample size","moduleId":"M8","goals":["decide"],"tier":"S","depth":"deep","answers":"要跑多久、收多少人，才能有把握看见一个值得行动的最小差异。","dataTypes":["binary","continuous"],"nRule":"先定 α、power=0.8、最小可检测效应 MDE，再反推每组 n。","design":["randomized","observational"],"assumptions":["基线率/方差可估","MDE 是业务上值得行动的最小值","检验方式与分析方式一致"],"contraindications":["事后用观测到的效应算功效（post-hoc power）","MDE 定得小到业务不关心"],"alternatives":["ab-test","sequential","multiplicity"],"failureSignals":["算出来的 n 比现有流量大一个量级","MDE 小于业务噪声"],"industries":["tech","marketing","pharma","hr"],"card":{"what":"用 α、power、基线率和 MDE 反推样本量；效应越小，需要的 n 越大（约按平方反比）。","when":"实验设计前、看板指标波动判断、决定要不要继续投放。","notWhen":"已经看完数据再算“够不够”；那是事后合理化。","example":"基线 10%，想看见 10%→12%，α=0.05、power=0.8，每组约 3,840 人。","misuse":["把 power=0.8 当保证","只算总样本不算每组"]},"sources":["S44","S29"]},{"id":"sequential","name":"序贯检验 / 防偷看","en":"Sequential testing / peeking","moduleId":"M8","goals":["decide"],"tier":"A","depth":"deep","answers":"实验还没跑完、你每天都在看结果，什么时候停才不会把噪声当结论。","dataTypes":["binary","continuous"],"nRule":"要么预先定固定样本量，要么用序贯方法（alpha spending/贝叶斯）。","design":["randomized"],"assumptions":["停止规则事先写死","每次看的时间点纳入方法","指标不随查看而改"],"contraindications":["看到显著就停、看到不显著就加样本","多个指标各自序贯"],"alternatives":["ab-test","power","bayes-ab"],"failureSignals":["p 值在 0.04–0.06 之间反复横跳","实验时长由结果决定"],"industries":["tech","marketing"],"card":{"what":"固定样本量的 t/z 检验假设你只看一次；反复看会把假阳性率推高。序贯方法把多次查看纳入误差预算。","when":"产品实验需要连续监控、不能等固定周期时。","notWhen":"你只是每天看描述性指标做监控，不据此下结论。","example":"每天看一次、连看 10 天，名义 5% 的检验实际假阳性率可能远超 5%；用 alpha spending 或贝叶斯决策规则。","misuse":["把“p 值刚过 0.05”当停止信号","事后补一个序贯方法"]},"sources":["S28","S29","S40"]},{"id":"cuped","name":"CUPED / 方差缩减","en":"CUPED","moduleId":"M8","goals":["causal","decide"],"tier":"A","depth":"deep","answers":"实验前就有数据，能不能用它把噪声压小、让实验更快出结论。","dataTypes":["continuous","binary"],"nRule":"需要可靠的实验前指标，且与实验期指标相关。","design":["randomized"],"assumptions":["实验前指标不受干预影响","与结果指标线性相关","随机化仍然有效"],"contraindications":["实验前指标被同一干预污染","相关性很弱","指标定义在实验期变了"],"alternatives":["ab-test","power","sequential"],"failureSignals":["CUPED 后方差几乎没降","实验前指标本身有组间差异"],"industries":["tech","marketing"],"card":{"what":"用实验前指标做协变量，减去它与结果的协方差部分，降低指标方差。","when":"有稳定的实验前行为/转化数据，且实验周期短、指标噪声大。","notWhen":"实验前指标会被干预影响，或样本太小估不准协方差。","example":"用实验前 4 周转化率做 CUPED，方差降 30%，等效于多跑了几周。","misuse":["把 CUPED 当“免费提升显著性”","用实验期数据做协变量"]},"sources":["S26","S29"]},{"id":"factorial-doe","name":"析因设计 DOE","en":"Factorial design","moduleId":"M8","goals":["causal","decide"],"tier":"B","depth":"deep","answers":"同时改几个因素，怎么知道哪个因素有效、它们会不会互相影响。","dataTypes":["continuous","binary"],"nRule":"2^k 设计至少每个组合 2–3 次重复；因素越多，run 数指数增长。","design":["randomized"],"assumptions":["因素水平可控制","随机化/区组化","交互作用可估"],"contraindications":["因素不能独立设置","伦理/成本不允许组合","只改一个因素就够"],"alternatives":["ab-test","msa","spc"],"failureSignals":["主效应显著但交互作用更大","实验条件漂移未被区组化"],"industries":["manufacturing","pharma","tech","research"],"card":{"what":"把多个因素按高低水平组合起来跑，估计主效应和交互效应。","when":"工艺参数、页面多个元素、配方优化；一次只改一个因素会漏掉交互。","notWhen":"因素之间有强约束，或组合成本高到跑不起。","example":"温度×时间×浓度 2³ 设计，8 个组合各 3 次；发现温度×时间交互显著，单独调温度会误判。","misuse":["一次只改一个因素（OFAT）","不看交互作用就下结论"]},"sources":["S24","S55"]},{"id":"matching","name":"倾向得分匹配","en":"Propensity score matching","moduleId":"M9","goals":["causal"],"tier":"B","depth":"deep","answers":"没法随机分组时，能不能找一批“什么都像、只差在是否接受干预”的人来比。","dataTypes":["binary","continuous"],"nRule":"处理组和对照组都要有足够重叠；极端倾向得分的人匹配不到。","design":["observational"],"assumptions":["可忽略性（没有未观测混杂）","重叠足够","协变量测量可靠"],"contraindications":["关键混杂没测到","处理组与对照组差异太大","用匹配后 p 值当因果证明"],"alternatives":["did","rdd","iv","regression-diagnostics"],"failureSignals":["匹配后仍有协变量不平衡","有效样本量骤降","不同匹配算法结论不同"],"industries":["public","hr","pharma","finance"],"card":{"what":"先估计每个人接受干预的概率（倾向得分），再按得分匹配/加权，比较结果。","when":"观察性数据、处理组人数不多、协变量较全；政策评估、招聘渠道效果。","notWhen":"有未观测混杂，或处理组/对照组几乎没有重叠；这时匹配只是把偏差藏起来。","example":"参加训练营 vs 没参加：按渠道、岗位、投递时间匹配后，录取率差从 +9pp 降到 +2pp。","misuse":["匹配后直接跑 t 检验当因果","只报匹配前平衡"]},"sources":["S56","S36"]},{"id":"did","name":"双重差分 DiD","en":"Difference-in-differences","moduleId":"M9","goals":["causal"],"tier":"B","depth":"deep","answers":"一个地方/一群人先变了，和没变的地方比，前后差了多少。","dataTypes":["continuous","binary","count"],"nRule":"每组至少十几个时间点/单位；平行趋势检验需要 pre 期。","design":["observational","quasi-experimental"],"assumptions":["平行趋势（没有干预时两组会同样变化）","干预不外溢","组成稳定"],"contraindications":["两组趋势本来就不一样","干预同时伴随其他变化","只有两期数据且无法检验趋势"],"alternatives":["matching","synthetic-control","rdd","iv"],"failureSignals":["pre 期趋势明显不同","安慰剂检验也显著","结果对时间窗敏感"],"industries":["public","marketing","hr","finance"],"card":{"what":"用（处理组后−前）−（对照组后−前）估增量，把共同的时间趋势扣掉。","when":"政策试点、渠道上线、区域改版；有处理组和可比对照组、有前后多期数据。","notWhen":"平行趋势不成立，或有其他同时发生的冲击。","example":"试点城市转化 6%→7.2%，非试点 6%→6.5%；DiD 增量 = 1.2 − 0.5 = 0.7pp。","misuse":["不做平行趋势检验","把 DiD 当“只要有前后就是因果”"]},"sources":["S37","S36"]},{"id":"rdd","name":"断点回归 RDD","en":"Regression discontinuity","moduleId":"M9","goals":["causal"],"tier":"B","depth":"deep","answers":"有一条硬分数线/阈值决定谁被处理，线两侧的人几乎一样，能不能比。","dataTypes":["continuous","binary"],"nRule":"断点附近需要足够密度；带宽选择影响结论。","design":["observational","quasi-experimental"],"assumptions":["阈值严格执行","断点附近没有操纵","其他变量在断点连续"],"contraindications":["有人精确操纵分数","断点附近样本太少","阈值同时对应其他变化"],"alternatives":["iv","did","matching"],"failureSignals":["断点处密度异常堆积","不同带宽结论相反","协变量在断点跳跃"],"industries":["public","hr","finance","research"],"card":{"what":"比较阈值两侧刚过线/刚没过线的人，估局部处理效应。","when":"录取线、补贴资格线、评分卡阈值、政策门槛。","notWhen":"阈值可以被操纵，或你关心的是远离阈值的人群。","example":"面试 60 分录取；59 和 61 分的人能力接近，比较线两侧的后续绩效。","misuse":["把 RDD 结果外推到所有人","不做操纵检验"]},"sources":["S58","S37"]},{"id":"iv","name":"工具变量 IV","en":"Instrumental variables","moduleId":"M9","goals":["causal"],"tier":"B","depth":"deep","answers":"有未观测混杂、又没法随机时，能不能找一个只通过干预影响结果的外生变量。","dataTypes":["continuous","binary"],"nRule":"工具变量要强（第一阶段 F 足够大），否则弱工具偏误严重。","design":["observational"],"assumptions":["相关性（工具影响处理）","排他性（工具只通过处理影响结果）","独立性/外生性"],"contraindications":["排他性无法检验且不可信","弱工具","工具直接影响结果"],"alternatives":["rdd","did","matching"],"failureSignals":["第一阶段 F<10","不同工具结论差很多","工具与结果直接相关"],"industries":["public","finance","research","hr"],"card":{"what":"用工具变量把处理中“外生的那部分”分离出来，估局部平均处理效应。","when":"抽签、距离、政策断点、时间/地区差异可作为工具，且只通过处理影响结果。","notWhen":"找不到可信的排他性限制；这时 IV 只是把假设换了个地方藏。","example":"用“是否被随机抽中宣讲会”作为参加训练的 IV，估训练对录取的影响。","misuse":["把任何相关变量当工具","不报第一阶段强度"]},"sources":["S37","S36"]},{"id":"synthetic-control","name":"合成控制 / 中断时间序列","en":"Synthetic control / ITS","moduleId":"M9","goals":["causal"],"tier":"B","depth":"deep","answers":"只有一个地方/一个单位发生了干预，怎么造一个可信的反事实。","dataTypes":["continuous","count","time"],"nRule":"合成控制需要多个未处理单位和较长的 pre 期；ITS 需要足够多的时间点。","design":["observational","quasi-experimental"],"assumptions":["未处理单位能加权拟合处理单位 pre 期","干预不外溢","ITS 假设无干预时趋势会延续"],"contraindications":["pre 期拟合很差","干预同时伴随其他政策","时间点太少"],"alternatives":["did","rdd","backtest"],"failureSignals":["pre 期拟合 RMSE 很大","安慰剂检验出现类似“效应”","干预后趋势突然断裂但不是干预造成"],"industries":["public","marketing","finance"],"card":{"what":"用多个对照单位加权组合出一个“假处理单位”，比较干预后的差距；ITS 则看干预前后水平/斜率是否断点。","when":"单城市试点、单公司政策、单渠道上线，找不到天然对照组。","notWhen":"有多个处理单位且可做 DiD；或 pre 期太短。","example":"某城市上线新政策，用 20 个未上线城市加权合成反事实，干预后 6 个月差距逐渐扩大。","misuse":["把合成控制的拟合优度当因果证明","不做安慰剂检验"]},"sources":["S57","S37"]},{"id":"stl","name":"STL 分解","en":"Seasonal-trend decomposition","moduleId":"M10","goals":["describe","monitor"],"tier":"A","depth":"deep","answers":"这条时间序列里，趋势、季节和残差各占多少，异常到底出在哪一层。","dataTypes":["time"],"nRule":"至少 2–3 个完整季节周期；周数据至少一年。","design":["time-series"],"assumptions":["季节性稳定或缓慢变化","观测间隔规则","残差可分离"],"contraindications":["间隔不规则","季节长度不明确","结构性断点"],"alternatives":["ets-arima","backtest","spc"],"failureSignals":["残差仍有明显季节","季节项逐年漂移","分解后残差方差很大"],"industries":["tech","marketing","manufacturing","finance"],"card":{"what":"用 Loess 平滑把序列拆成趋势、季节、残差三部分，可加稳健选项。","when":"周/月指标有固定节律、需要看“去掉季节后”的真实变化。","notWhen":"数据没有稳定季节，或间隔不规则；先做聚合/对齐。","example":"周线索量：趋势平、季节项在开学季高、残差里有一周异常低，说明是短期事件而非趋势下滑。","misuse":["把季节项当趋势","分解完不检查残差"]},"sources":["S30","S51"]},{"id":"ets-arima","name":"ETS / ARIMA","en":"Exponential smoothing / ARIMA","moduleId":"M10","goals":["predict"],"tier":"A","depth":"deep","answers":"下一周/下个月大概是多少，区间有多宽。","dataTypes":["time"],"nRule":"至少 30–50 个时间点；季节模型需要多个周期。","design":["time-series"],"assumptions":["历史模式会延续","残差近似白噪声","参数稳定"],"contraindications":["结构性断点","政策/产品大改","外生变量主导"],"alternatives":["stl","backtest","linear-regression"],"failureSignals":["残差自相关","预测区间过窄","不同模型差异巨大"],"industries":["tech","finance","manufacturing","marketing"],"card":{"what":"ETS 用水平/趋势/季节的指数平滑；ARIMA 用差分和自回归/移动平均描述序列。","when":"有稳定历史节律的短中期预测；库存、人力、流量。","notWhen":"刚发生结构性变化，或预测依赖未来外生变量。","example":"12 个月线索量，ETS(A,A,N) 预测下月 420，95% 区间 360–480；用滚动回测看误差。","misuse":["用 R² 评价预测","不做回测就上线"]},"sources":["S30","S50"]},{"id":"backtest","name":"回测 / 滚动验证","en":"Backtesting / rolling origin","moduleId":"M10","goals":["predict","monitor"],"tier":"A","depth":"deep","answers":"这个预测模型放到过去，真的能提前预测吗，误差有多大。","dataTypes":["time"],"nRule":"至少 3–5 个滚动窗口；留出足够长的测试期。","design":["time-series"],"assumptions":["训练只用预测时点之前的数据","重训频率与上线一致","误差指标匹配决策"],"contraindications":["随机 K 折交叉验证（会泄漏未来）","只用一个训练/测试切分"],"alternatives":["ets-arima","stl"],"failureSignals":["回测误差远小于上线误差","不同窗口误差波动巨大"],"industries":["tech","finance","manufacturing"],"card":{"what":"按时间滚动：用过去训练、预测下一段、再往前滚，累计样本外误差。","when":"任何要上线的预测/异常检测；也是比较 ETS/ARIMA/回归的标准做法。","notWhen":"数据没有时间顺序（那是普通交叉验证的场景）。","example":"训练 24 个月、预测 3 个月、滚动 12 次；比较 MASE 而不是 MAPE。","misuse":["随机打乱时间做交叉验证","只看一次切分"]},"sources":["S30","S50"]},{"id":"clustering","name":"聚类","en":"k-means / hierarchical / DBSCAN","moduleId":"M11","goals":["describe","segment"],"tier":"A","depth":"deep","answers":"这批人/这些客户，能不能分成几类，每类的画像有什么不同。","dataTypes":["continuous","mixed"],"nRule":"每类至少几十个样本；变量多时先降维；n 太小聚类不稳定。","design":["cross-sectional"],"assumptions":["距离度量有意义","变量已标准化","簇的形状与算法匹配"],"contraindications":["把聚类结果当真实类别","不标准化就聚类","用聚类证明因果"],"alternatives":["pca","factor-analysis","dist"],"failureSignals":["换一个随机种子分类大变","轮廓系数很低","k-means 在明显非球形数据上硬分"],"industries":["marketing","tech","hr","public"],"card":{"what":"按样本之间的相似度分组：k-means 找球心，层次聚类建树，DBSCAN 找密度连通区域。","when":"客户/申请人分群、探索画像、给运营分层。","notWhen":"你心里已经有明确类别，或有标签可以做分类；聚类不保证类别“真实存在”。","example":"按活跃度、客单价、来源聚类，得到 4 群；换随机种子后 3 群合并，说明边界不稳。","misuse":["用轮廓系数挑 k 就宣布最优","把簇命名当业务事实"]},"sources":["S31"]},{"id":"pca","name":"主成分分析 PCA","en":"Principal component analysis","moduleId":"M11","goals":["describe"],"tier":"A","depth":"deep","answers":"十几个互相相关的指标，能不能压成两三个不相关的维度来看。","dataTypes":["continuous"],"nRule":"样本数至少是变量数的 5–10 倍；变量先标准化。","design":["cross-sectional"],"assumptions":["线性关系","变量间有相关性","标准化后比较"],"contraindications":["非线性流形","变量量纲差异大且不标准化","把主成分当原始变量解释"],"alternatives":["factor-analysis","clustering","correlation"],"failureSignals":["第一主成分只解释 15%","载荷在两组变量上各半","解释方差随样本变化很大"],"industries":["hr","marketing","research","tech"],"card":{"what":"找一组正交方向，让第一方向解释最多方差，第二方向次之。","when":"问卷多题、多个行为指标、画像降维；也是聚类前的常用预处理。","notWhen":"变量之间没有线性相关，或你要保留原始指标的业务含义。","example":"8 个问卷题压成 2 个主成分，累计解释 62%；第一成分载荷集中在“主动性”题。","misuse":["不标准化","把主成分命名成确定的心理维度"]},"sources":["S31"]},{"id":"factor-analysis","name":"因子分析","en":"Factor analysis","moduleId":"M11","goals":["describe"],"tier":"B","depth":"deep","answers":"很多题背后是不是有几个潜在的共同因素，题目归到哪个因素上。","dataTypes":["continuous","ordinal"],"nRule":"样本至少 5–10 倍于题目数；小样本结果不稳。","design":["cross-sectional","survey"],"assumptions":["线性关系","潜变量模型","样本足够","题目测量同一构念"],"contraindications":["题目太少","样本不足","把探索性因子分析当确证"],"alternatives":["pca","reliability","irt"],"failureSignals":["题目跨载荷","因子数随提取方法变化","KMO 很低"],"industries":["hr","research","public","marketing"],"card":{"what":"假设观测题由少数潜变量生成，估计载荷与因子得分。","when":"量表开发、问卷维度检验、把多题合成维度分。","notWhen":"你只是想做降维/可视化；PCA 更直接。","example":"12 道面试评价题，探索出“专业能力”和“沟通”两个因子；两道题跨载荷被删。","misuse":["用同一批数据又探索又确证","不看 KMO/ Bartlett 就硬做"]},"sources":["S31","S54"]},{"id":"bayes-update","name":"贝叶斯更新","en":"Bayesian updating","moduleId":"M12","goals":["estimate","decide"],"tier":"B","depth":"deep","answers":"先有一个大概判断，看到新数据后，这个判断应该改多少。","dataTypes":["binary","continuous"],"nRule":"先验要明确写出来；小样本时后验更依赖先验。","design":["independent","randomized","observational"],"assumptions":["先验可辩护","似然模型正确","数据独立"],"contraindications":["先验是事后凑的","用后验概率冒充频率保证","模型与数据生成过程不符"],"alternatives":["wilson","bayes-ab","decision-monte-carlo"],"failureSignals":["换个先验结论就翻转","后验区间与先验几乎一样","先验没有来源"],"industries":["tech","pharma","finance","research"],"card":{"what":"先验分布 + 似然 = 后验分布；小样本时先验影响大，大样本时数据主导。","when":"小样本、需要累积证据、要做决策而不是只报 p 值。","notWhen":"监管要求频率学保证，或先验无法说清楚。","example":"均匀先验下，10 次里 5 次成功，后验均值 50%，95% 可信区间约 23%–77%。","misuse":["把可信区间读成频率置信区间","先验看完数据再定"]},"sources":["S49","S53"]},{"id":"bayes-ab","name":"贝叶斯 A/B","en":"Bayesian A/B testing","moduleId":"M12","goals":["decide"],"tier":"B","depth":"deep","answers":"B 比 A 好的概率有多大，继续跑还是现在就切。","dataTypes":["binary","continuous"],"nRule":"后验模拟次数足够；先验要温和且写死。","design":["randomized"],"assumptions":["先验合理","两组独立","决策损失可定义"],"contraindications":["把“B 优于 A 的概率 95%”当频率保证","先验随结果调整"],"alternatives":["ab-test","sequential","decision-monte-carlo"],"failureSignals":["后验概率随先验大幅变化","决策阈值没定义"],"industries":["tech","marketing"],"card":{"what":"给两组转化率各一个 Beta 先验，算后验，再模拟 B−A 的分布。","when":"小样本、需要连续监控、要直接回答“该不该切”。","notWhen":"需要严格控制长期假阳性率，且团队不熟悉先验。","example":"A 12/40、B 18/40，温和先验下 B 优于 A 的后验概率约 90%，但仍有 10% 可能更差。","misuse":["把 90% 说成“一定更好”","不定义损失就切"]},"sources":["S49","S29"]},{"id":"decision-monte-carlo","name":"决策分析 / 蒙特卡洛","en":"Decision analysis / Monte Carlo","moduleId":"M12","goals":["decide"],"tier":"B","depth":"deep","answers":"几个方案各有不确定性，按期望收益和尾部风险，该选哪个。","dataTypes":["mixed"],"nRule":"每个不确定输入都要有分布依据；模拟 1 万次以上。","design":["decision"],"assumptions":["输入分布可辩护","变量间相关性建模","目标函数明确"],"contraindications":["输入分布是编的","只看期望不看尾部","把模型当现实"],"alternatives":["bayes-update","power","calibration"],"failureSignals":["结论对某个输入极敏感","期望收益高但 5% 分位亏穿"],"industries":["finance","consulting","pharma","tech"],"card":{"what":"把不确定输入写成分布，随机抽样计算每个方案的结果分布，比较期望、分位数与损失概率。","when":"预算分配、投放规模、库存/人力、风险上限；多个不确定因素交织。","notWhen":"输入几乎没有不确定性，或目标函数说不清。","example":"三个投放方案，模拟 1 万次；A 期望最高但 5% 分位亏 20 万，C 期望低 5% 但尾部只亏 3 万。","misuse":["用点估计代替分布","只报均值不报尾部"]},"sources":["S49","S44"]},{"id":"survival","name":"生存分析","en":"Kaplan-Meier / Cox","moduleId":"IND","goals":["predict","compare"],"tier":"B","depth":"short","answers":"一件事多久会发生（离职、流失、复发），而且有人还没发生就被截断了。","dataTypes":["time","binary"],"nRule":"每个协变量至少 10 个事件；删失比例高时要更多。","design":["observational","randomized"],"assumptions":["删失与事件时间独立（非信息删失）","Cox 的比例风险假设"],"contraindications":["把删失当缺失删掉","用普通 logistic 忽略时间"],"alternatives":["mixed-model","logistic","backtest"],"failureSignals":["KM 曲线后期样本很少却解释得很确定","比例风险检验显著"],"industries":["hr","pharma","tech","finance"],"card":{"what":"用生存函数描述“到事件发生的时间”，Cox 模型估协变量对风险比的影响。","when":"员工离职、客户流失、设备故障、临床复发；有随访和删失。","notWhen":"事件在同一时点全部发生，或没有时间维度。","example":"两类候选人的 90 天流失曲线：KM 显示 A 组 30 天留存 85%，B 组 70%；Cox HR=1.8。","misuse":["把删失样本删掉","把 HR 当绝对风险"]},"sources":["S23","S31"]},{"id":"mixed-model","name":"混合效应模型","en":"Mixed-effects model","moduleId":"IND","goals":["compare","associate"],"tier":"B","depth":"short","answers":"数据有嵌套/重复测量时，怎么同时估组间差异和个体波动。","dataTypes":["continuous","binary","count"],"nRule":"每组/每个随机效应层级要有足够单位；否则方差估不稳。","design":["nested","repeated","randomized"],"assumptions":["随机效应分布假设","残差结构","缺失机制可忽略"],"contraindications":["把重复测量当独立","层级太少却硬加随机斜率"],"alternatives":["anova","survival","linear-regression"],"failureSignals":["模型不收敛","随机效应方差接近 0","不同协方差结构结论不同"],"industries":["pharma","hr","research","tech"],"card":{"what":"固定效应估总体关系，随机效应吸收个体/组/时间的相关结构。","when":"同一人多次测量、学生嵌套在班级、门店嵌套在城市、纵向数据。","notWhen":"每个层级只有一两个单位；或独立性假设本来就成立。","example":"30 个门店×12 周的门店周数据；随机截距吸收门店差异，固定效应估活动效果。","misuse":["用普通 ANOVA 处理重复测量","忽略缺失机制"]},"sources":["S23","S31"]},{"id":"msa","name":"测量系统分析 MSA","en":"Gage R&R","moduleId":"IND","goals":["describe","monitor"],"tier":"B","depth":"short","answers":"测量本身有多大误差，看到的变化是零件差异还是量具噪声。","dataTypes":["continuous"],"nRule":"通常 10 个零件×2–3 个操作员×2–3 次重复。","design":["cross-sectional","repeated"],"assumptions":["零件样本覆盖过程范围","操作员随机","测量独立"],"contraindications":["零件范围太窄","操作员训练差异本身就是研究问题"],"alternatives":["spc","reliability"],"failureSignals":["%GRR>30%","操作员×零件交互显著","重复测量差异大"],"industries":["manufacturing","pharma","research"],"card":{"what":"把总变异拆成零件间、操作员间、重复测量误差，算 %GRR。","when":"上 SPC/能力分析之前，先确认量具够不够准。","notWhen":"测量是破坏性的、无法重复；那要考虑嵌套设计。","example":"%GRR=18%，测量误差可接受；若 40%，先修量具再谈过程能力。","misuse":["跳过 MSA 直接算 Cpk","用不合格量具做 DOE"]},"sources":["S24"]},{"id":"spc","name":"统计过程控制 SPC","en":"Control charts","moduleId":"IND","goals":["monitor"],"tier":"B","depth":"short","answers":"过程是在正常波动，还是出现了特殊原因导致的异常；稳定后离规格还有多少余量。","dataTypes":["continuous","count"],"nRule":"控制限要基于足够多的基线点（通常 20–25 组）；能力指数至少 25–30 个子组。","design":["time-series"],"assumptions":["过程稳定时才能算控制限","抽样间隔合理","测量系统可用"],"contraindications":["把规格限当控制限","用异常数据算基线","过程已经失控还继续算"],"alternatives":["msa","backtest"],"failureSignals":["连续 7 点在同一侧","点超出 3σ","趋势/周期模式","Cpk 很高但控制图失控"],"industries":["manufacturing","pharma","tech"],"card":{"what":"用均值/极差/个体移动极差图区分普通原因与特殊原因波动；过程稳定后，Cp 看宽度、Cpk 同时看宽度与偏心。","when":"生产/服务过程需要持续监控，或稳定后要向客户/监管证明过程能力。","notWhen":"过程还没稳定，或数据不是按时间顺序采的；这时先修过程再谈能力。","example":"XmR 图连续 7 点在中心线上方，提示均值漂移；稳定后规格 10±2、均值 10.8、SD 0.5，Cp=1.33、Cpk=0.8。","misuse":["用规格限画控制图","失控状态下算 Cpk"]},"sources":["S24"]},{"id":"survey-weight","name":"抽样设计与加权","en":"Survey design / weighting","moduleId":"IND","goals":["estimate","describe"],"tier":"B","depth":"short","answers":"问卷/抽样得到的比例，怎么还原到总体，误差怎么算。","dataTypes":["binary","categorical","continuous"],"nRule":"每个加权格至少几十个样本；极端权重会放大方差。","design":["survey","stratified","cluster"],"assumptions":["抽样设计已知","无应答机制可建模","权重正确"],"contraindications":["把非概率样本当概率样本","忽略设计效应","加权后不检查极端权重"],"alternatives":["wilson","bootstrap","bayes-update"],"failureSignals":["权重变异极大","加权前后结论翻转","有效样本量远小于名义 n"],"industries":["public","marketing","hr","research"],"card":{"what":"按抽样概率/后分层给每个样本加权，用设计效应修正标准误。","when":"问卷、居民调查、员工满意度；样本结构与总体不一致。","notWhen":"便利样本且无法建模无应答；这时只能描述样本，不能推总体。","example":"样本里一线城市占 60%、总体占 30%；加权后比例变了，标准误也要乘设计效应。","misuse":["加权后仍用简单随机公式算 CI","只报加权比例不报有效样本量"]},"sources":["S31"]},{"id":"reliability","name":"信度与效度","en":"Reliability / validity","moduleId":"IND","goals":["describe","decide"],"tier":"B","depth":"short","answers":"这套评分/量表测出来稳不稳定，测的是不是它声称要测的东西。","dataTypes":["continuous","ordinal"],"nRule":"信度至少 30–50 个样本；题目越多，alpha 越容易虚高。","design":["cross-sectional","survey"],"assumptions":["单维构念（alpha 的前提）","题目同向","样本代表目标人群"],"contraindications":["用 alpha 证明单维","题目反向计分未处理","只在开发样本验证"],"alternatives":["factor-analysis","agreement","irt"],"failureSignals":["alpha 0.9 但题目内容重复","删一题 alpha 大涨","重测相关很低"],"industries":["hr","research","public","pharma"],"card":{"what":"信度看一致性（alpha、重测、评分者间），效度看是否测到目标构念（内容/结构/效标）。","when":"面试评分表、问卷量表、AI 评分规则上线前。","notWhen":"只有一题/一个指标；信度无从谈起。","example":"8 题 alpha=0.78，重测 r=0.65；结构效度用因子分析看到两个维度，与设计不符。","misuse":["把 alpha 当效度","题目越多越有信心"]},"sources":["S54"]},{"id":"irt","name":"项目反应理论 IRT","en":"Item response theory","moduleId":"IND","goals":["estimate","describe"],"tier":"C","depth":"short","answers":"每道题难度/区分度如何，一个人的能力怎么从答题模式估出来。","dataTypes":["binary","ordinal"],"nRule":"每题至少几百个作答；小样本估不稳。","design":["cross-sectional"],"assumptions":["单维/指定维度","局部独立","参数模型正确"],"contraindications":["样本小","题目太少","把 IRT 分数当绝对能力"],"alternatives":["reliability","factor-analysis"],"failureSignals":["题目区分度为负","模型拟合差","不同题目版本分数不可比"],"industries":["research","hr","public"],"card":{"what":"用题目参数（难度、区分度、猜测）和能力参数解释作答概率。","when":"大规模考试、能力测评、需要等值/题目 bank。","notWhen":"样本几百以内，或只是内部小量表。","example":"同一套题给不同批次考生，IRT 把难度差异扣掉后再比较能力。","misuse":["用经典测验总分代替 IRT 等值","样本不足硬估参数"]},"sources":["S54"]},{"id":"conjoint","name":"联合分析 / MaxDiff","en":"Conjoint / MaxDiff","moduleId":"IND","goals":["associate","decide"],"tier":"B","depth":"short","answers":"用户到底更看重哪个属性，愿意为它让掉多少别的。","dataTypes":["categorical","ordinal"],"nRule":"每个受访者多轮选择；总体至少几百人。","design":["survey","experiment"],"assumptions":["属性可分解","选择是补偿性的（conjoint）","样本代表目标市场"],"contraindications":["属性水平不可信","受访者在做策略性回答","样本太小"],"alternatives":["survey-weight","factor-analysis","clustering"],"failureSignals":["属性重要性全都很高","不同版本结论差很多","拒绝率很高"],"industries":["marketing","research","consulting"],"card":{"what":"让受访者在属性组合间选择，反推每个水平的效用权重；MaxDiff 只做排序。","when":"定价、产品配置、雇主品牌、offer 设计。","notWhen":"属性之间强交互或受访者无法理解组合。","example":"薪资、远程、成长、品牌四属性，联合分析显示“远程”权重 28%，高于品牌 12%。","misuse":["把重要性当因果","样本只覆盖一个城市就外推全国"]},"sources":["S31"]},{"id":"mmm","name":"营销组合模型 MMM","en":"Marketing mix modeling","moduleId":"IND","goals":["associate","decide"],"tier":"C","depth":"short","answers":"各个渠道的投放，长期看各自贡献了多少，预算怎么分。","dataTypes":["time","continuous"],"nRule":"至少 2–3 年周数据；渠道共线时要收缩/先验。","design":["time-series","observational"],"assumptions":["饱和与 adstock 形式合理","控制变量足够","无重大结构性断点"],"contraindications":["用 MMM 做个体归因","渠道高度共线","数据太短"],"alternatives":["did","synthetic-control","backtest"],"failureSignals":["渠道贡献对先验极敏感","残差自相关","预算优化建议离谱"],"industries":["marketing","consulting"],"card":{"what":"用时间序列回归把销量拆成基准、趋势、季节、各渠道饱和/adstock 贡献。","when":"无法做个体级归因、需要年度预算分配时。","notWhen":"你要评估一次具体活动，或有实验数据可用。","example":"3 年周数据，MMM 估品牌广告贡献 18%、效果广告 32%；预算优化建议把 10% 从 A 移到 B。","misuse":["把 MMM 当因果实验","忽略渠道共线"]},"sources":["S32"]},{"id":"noninferiority","name":"非劣效 / 等价性","en":"Non-inferiority / TOST","moduleId":"IND","goals":["compare","decide"],"tier":"B","depth":"short","answers":"新方案是不是“没有差到不可接受”，而不是“没有显著差异”。","dataTypes":["binary","continuous","time"],"nRule":"界值必须事先定；样本量按单侧检验算。","design":["randomized"],"assumptions":["界值有临床/业务依据","分析人群与主分析一致","对照有效"],"contraindications":["把普通显著性检验不显著当非劣效","事后改界值"],"alternatives":["ab-test","power","survival"],"failureSignals":["置信区间跨过界值","界值是事后定的","缺失数据处理改变结论"],"industries":["pharma","manufacturing","tech"],"card":{"what":"检验新方案−对照的差是否大于预先设定的非劣效界值（单侧）。","when":"新药/新工艺/便宜替代方案要证明“不差太多”。","notWhen":"你想证明“更好”；那是优效性检验。","example":"新流程成功率 92%，旧流程 93%，非劣效界值 −5pp；95% CI 下限 −3pp，不跨界值，可判非劣效。","misuse":["p>0.05 就宣布非劣效","界值没有依据"]},"sources":["S23"]}],"tiers":{"S":"几乎每个数据岗都会遇到，且是其他方法的前置","A":"高频且不可替代","B":"特定行业/问题高频","C":"低频但关键，知道何时找专家"}},"quiz":{"note":"报告里的 12 道模块开场题。每题只考一个判断，不考记忆；答错后看解释。","items":[{"id":"q01","moduleId":"M1","title":"老板问“典型客单价”","industry":"增长 / 招聘","context":"某渠道 40 笔订单，客单价均值 320 元，中位数 180 元；有 3 笔 5000 元以上的团购大单。老板问：“这个渠道典型一单多少钱？”","decision":"你该报哪个数？","options":[{"id":"a","label":"均值 320 元","why":"均值把 3 笔团购大单算进去了，回答的是“总额除以单数”，不是“典型一单”。","correct":false},{"id":"b","label":"中位数 180 元，并同时给 P25–P75","why":"中位数回答“典型一单”，分位区间告诉你大多数人落在哪；这是偏态数据该有的报法。","correct":true},{"id":"c","label":"均值减去最大值再算","why":"随手删数据没有规则，而且删多少、为什么删都说不清；应该用对异常值不敏感的描述量。","correct":false},{"id":"d","label":"做一次 t 检验，看均值是否显著","why":"问题不是“和谁比”，是“怎么描述”，检验答非所问。","correct":false}],"correct":"b","explanation":"分布右偏时，均值被少数大单拉高。先用中位数和 P25/P75 描述典型水平；如果老板关心总额，再单独报均值并说明它被大单抬高。","nearMiss":"q02"},{"id":"q02","moduleId":"M2","title":"12 个人里 2 个入营","industry":"招聘 funnel","context":"某渠道带来 12 个申请人，2 人入营。老板要一个“误差范围”，你好写进周报。","decision":"用哪个区间？","options":[{"id":"a","label":"Wald：p̂ ± 1.96×SE","why":"n 太小、p̂ 接近 0，Wald 会给出负的下限（约 −4%），在业务上无法解释。","correct":false},{"id":"b","label":"Wilson：约 5%–45%","why":"Wilson 在极端比例和小样本下不会越界，是这类场景的默认选择。","correct":true},{"id":"c","label":"t 区间：用 t 分布代替 1.96","why":"t 修的是均值/方差未知，不是比例；比例的边界问题它解决不了。","correct":false},{"id":"d","label":"卡方检验的 p 值","why":"p 值回答“有没有差异”，不回答“比例可能落在哪”。","correct":false}],"correct":"b","explanation":"2/12 的点估计是 16.7%。Wald 给 −4%–38%，Wilson 给约 5%–45%，Clopper-Pearson 更保守。小样本比例优先 Wilson，并在周报里同时写 n 和事件数。","nearMiss":"q01"},{"id":"q03","moduleId":"M3","title":"同一批人培训前后","industry":"人力 / 培训","context":"30 位候选人参加同一场面试训练，训练前后各做一次模拟面试评分（0–10 分）。你想知道训练是否提高了平均分。","decision":"用哪个检验？","options":[{"id":"a","label":"独立样本 t 检验","why":"前后是同一批人，拆成两组会丢掉配对信息，也会虚增或虚减检验力。","correct":false},{"id":"b","label":"配对 t 检验","why":"先算每个人的前后差值，再检验差值均值是否为 0；配对结构被保留。","correct":true},{"id":"c","label":"单因素 ANOVA","why":"ANOVA 比较三个以上独立组；这里只有一组人、两个时点。","correct":false},{"id":"d","label":"卡方检验","why":"结果是 0–10 的连续评分，不是分类频数。","correct":false}],"correct":"b","explanation":"配对 t 的自由度是“对数−1”，不是总观测数−2。若差值强偏态或评分是等级，改用 Wilcoxon 符号秩。","nearMiss":"q04"},{"id":"q04","moduleId":"M4","title":"两个渠道各只有十几个人","industry":"招聘 funnel","context":"小红书来 18 人，3 人入营；微信来 22 人，5 人入营。老板问：“两个渠道的入营率有本质差异吗？”","decision":"用哪个检验？","options":[{"id":"a","label":"两比例 z 检验","why":"期望事件数太小，正态近似不可靠；p 值会不准。","correct":false},{"id":"b","label":"Fisher 精确检验","why":"小样本 2×2、事件数少时，Fisher 不依赖大样本近似，是更稳的选择。","correct":true},{"id":"c","label":"卡方独立性检验","why":"同一张表，但期望频数<5 时卡方近似很差；小样本应让位给 Fisher。","correct":false},{"id":"d","label":"McNemar 检验","why":"McNemar 用于同一批人前后/配对的 0/1 结果；两个渠道是不同的人。","correct":false}],"correct":"b","explanation":"16.7% 对 22.7%，差 6 个百分点，但 Fisher p 大约 0.7。正确的结论不是“微信更好”，而是“样本太少，方向可能有，但现在不能下结论”，下一步是扩大样本或报 Wilson 区间。","nearMiss":"q03"},{"id":"q05","moduleId":"M5","title":"四个渠道一起比","industry":"增长","context":"小红书、微信、领英、内推四个渠道的入营率分别是 8/120、14/150、6/90、22/140。你想知道四个渠道整体上是否有差异。","decision":"用哪个方法？","options":[{"id":"a","label":"做 6 次两两 z 检验","why":"6 次检验会把假阳性率从 5% 推到约 26%，而且没有先回答“整体有没有差异”。","correct":false},{"id":"b","label":"单因素 ANOVA","why":"ANOVA 比较连续结果的均值；这里是四个比例/频数。","correct":false},{"id":"c","label":"卡方独立性检验，再看标准化残差","why":"四个渠道×是否入营是 2×4 列联表；卡方先答“整体有没有关联”，残差再找是谁。","correct":true},{"id":"d","label":"McNemar 检验","why":"McNemar 用于配对比例；四个渠道是独立人群。","correct":false}],"correct":"c","explanation":"整体卡方显著只说明“至少有一个渠道不同”，不能宣布“四个都不同”。事后用标准化残差或校正后的两两比较找差异来源；如果同时看 20 个指标，还要做 BH/Holm 校正。","nearMiss":"q04"},{"id":"q06","moduleId":"M6","title":"面试分能预测入职后表现吗","industry":"人力","context":"80 位入职者的面试总分与 6 个月后的绩效评分。散点图显示大体同向，但有几个面试高分、绩效很低的人，关系更像单调而不是直线。","decision":"先看哪个指标？","options":[{"id":"a","label":"Pearson 相关系数","why":"Pearson 假设线性关系，且对异常值敏感；这几个点会把 r 拉低或拉偏。","correct":false},{"id":"b","label":"Spearman 秩相关","why":"Spearman 只看单调关系，对异常值更稳，适合这份散点图的形状。","correct":true},{"id":"c","label":"卡方检验","why":"两个变量都是连续/多水平评分，不是分类频数。","correct":false},{"id":"d","label":"直接上逻辑回归","why":"结果不是二分类；先看关系形状，再决定模型。","correct":false}],"correct":"b","explanation":"先画散点图再选相关系数。Spearman ρ 明显高于 Pearson r 时，说明关系是单调但不线性，或者被异常值影响；这会影响你后面用线性回归还是分段/秩方法。","nearMiss":"q07"},{"id":"q07","moduleId":"M7","title":"两个评审给同一批人分级","industry":"人力 / AI 评估","context":"两位评审给 100 位候选人分 S/A/B/C 四级，85 人分级一致。但样本里 80% 的人都是 B。你想知道“一致性到底算不算高”。","decision":"看哪个指标？","options":[{"id":"a","label":"原始一致率 85%，够了","why":"B 占 80% 时，两个评审都随便打 B 也能有很高的原始一致率；它没扣掉“碰巧一致”。","correct":false},{"id":"b","label":"Cohen's kappa","why":"kappa 扣掉碰巧一致；这份数据里 kappa 大约 0.5，远低于 85% 给人的印象。","correct":true},{"id":"c","label":"AUC","why":"AUC 需要二分类标签和连续分数；这里是多级分类的一致性。","correct":false},{"id":"d","label":"卡方检验","why":"卡方回答两个变量是否相关，不回答“两个评审有多一致”。","correct":false}],"correct":"b","explanation":"类别不平衡时，原始一致率会骗人。报 kappa 的同时报原始一致率和各类别分布；如果类别极度不平衡，还要看 PABAK 或 Gwet's AC1。","nearMiss":"q06"},{"id":"q08","moduleId":"M8","title":"实验第 3 天 p=0.04","industry":"增长 / 产品","context":"A/B 测试计划跑 2 周，第 3 天查看结果，p=0.04，转化率 B 高 0.8 个百分点。团队说“显著了，今天就全量”。","decision":"你该怎么做？","options":[{"id":"a","label":"立刻全量，p<0.05 就是显著","why":"计划外提前看结果会推高假阳性率；“第 3 天显著”很可能只是噪声。","correct":false},{"id":"b","label":"跑到预先定的样本量/周期；或用序贯方法重新设计","why":"固定样本量检验假设只看一次；要提前停，就用 alpha spending 或贝叶斯决策规则，并事先写死。","correct":true},{"id":"c","label":"把 alpha 调到 0.01 再看","why":"事后调 alpha 不能修复“多次查看”的选择偏差，只是把标准改来适配结果。","correct":false},{"id":"d","label":"换一个更显著的指标","why":"这是典型的指标挑选/多重比较问题，会把假阳性率推得更高。","correct":false}],"correct":"b","explanation":"先检查实验前是否写了停止规则、样本量、主指标。没有的话，跑满计划周期是默认；要连续监控，就用序贯检验或贝叶斯方法，并把决策阈值写死。","nearMiss":"q09"},{"id":"q09","moduleId":"M9","title":"一个城市先上线了新政策","industry":"公共 / 增长","context":"某城市 1 月上线新政策，其他城市没上。你有该城市和其他 20 个城市 24 个月的月度转化率。没有随机分配。","decision":"用哪个方法估政策效应？","options":[{"id":"a","label":"配对 t：政策前后比","why":"只比前后会把季节、大盘趋势、其他同时发生的变化都算成政策效应。","correct":false},{"id":"b","label":"双重差分 DiD：该城市前后差 − 其他城市前后差","why":"DiD 扣掉共同时间趋势，前提是平行趋势；这是最直接的准实验方法。","correct":true},{"id":"c","label":"卡方检验","why":"卡方不处理时间趋势，也不估效应大小。","correct":false},{"id":"d","label":"相关分析","why":"相关不能回答“政策带来多少增量”，也不能控制混杂。","correct":false}],"correct":"b","explanation":"先画两组 pre 期趋势，做平行趋势/事件研究；如果趋势不平行，考虑合成控制或加入协变量。DiD 的核心是识别假设，不是公式。","nearMiss":"q08"},{"id":"q10","moduleId":"M10","title":"预测下个月的线索量","industry":"增长","context":"36 个月的月度线索量，有明显开学季高峰和缓慢上升趋势。老板要下个月的预测和区间。","decision":"用哪个方法？","options":[{"id":"a","label":"用月份序号做一元线性回归","why":"线性趋势会把季节高峰当成噪声，残差自相关，预测区间也不对。","correct":false},{"id":"b","label":"ETS/ARIMA 建模，并用滚动回测选模型","why":"显式处理趋势和季节，回测给出样本外误差；这是时间序列预测的标准做法。","correct":true},{"id":"c","label":"ANOVA 比较 12 个月的均值","why":"ANOVA 能说明月份间有差异，但不给你下个月的预测值和区间。","correct":false},{"id":"d","label":"对 36 个月做 t 检验","why":"t 检验回答均值是否等于某个值，不处理趋势/季节，也不做预测。","correct":false}],"correct":"b","explanation":"先做 STL 看趋势/季节，再比较 ETS 与 ARIMA；用滚动起点回测算 MASE，而不是只看 R² 或 MAPE。预测区间要一起给。","nearMiss":"q11"},{"id":"q11","moduleId":"M11","title":"给 200 个申请人分群","industry":"人力 / 增长","context":"200 位申请人，每人 8 个行为指标（投递间隔、打开次数、渠道、活跃天数等），没有现成标签。你想找出“几类人”。","decision":"先做什么？","options":[{"id":"a","label":"逻辑回归","why":"逻辑回归需要标签；这里没有“类别”可预测。","correct":false},{"id":"b","label":"标准化后做聚类，必要时先用 PCA 降维","why":"无标签分群用聚类；变量量纲差异大，先标准化，指标多时先降维。","correct":true},{"id":"c","label":"卡方检验","why":"卡方检验变量间关联，不会把 200 人分成几类。","correct":false},{"id":"d","label":"t 检验","why":"t 检验比较两组均值；这里既没有两组，也没有预设结果。","correct":false}],"correct":"b","explanation":"聚类前先标准化；k-means 对尺度敏感，DBSCAN 对密度敏感。用轮廓系数/稳定性检验选 k，并换随机种子验证；簇名是业务解释，不是自然事实。","nearMiss":"q10"},{"id":"q12","moduleId":"M12","title":"小样本 A/B，要不要切","industry":"增长","context":"A 组 12/40 转化，B 组 18/40。老板不想等，说“你给我一个能拍板的数：B 更好的概率多大，切过去可能亏多少”。","decision":"用哪个框架？","options":[{"id":"a","label":"只报 p 值","why":"p 值不回答“B 更好的概率”或“切过去亏多少”，也不能直接映射到决策损失。","correct":false},{"id":"b","label":"贝叶斯后验 + 期望损失","why":"先验+后验给出 P(B>A) 和损失分布，正好回答“概率多大、可能亏多少”。","correct":true},{"id":"c","label":"卡方检验","why":"卡方给一个 p 值，同样不回答决策问题；小样本下近似也不稳。","correct":false},{"id":"d","label":"加大样本到 4000 再算","why":"扩样本是对的方向，但老板现在就要拍板；贝叶斯框架可以先给当前证据下的决策概率。","correct":false}],"correct":"b","explanation":"贝叶斯 A/B 给的是“当前证据下 B 优于 A 的概率”和期望损失；它不是频率保证，先验要写死。若老板要的是长期假阳性控制，仍应回到固定样本量或序贯频率方法。","nearMiss":"q08"}]},"sources":{"accessed":"2026-11-17","note":"每条来源只用于它实际支持的主张。未读到原文全文的，标注 evidence 为 abstract 或 metadata。","items":[{"id":"S01","short":"Dunlosky 2013","title":"Improving Students' Learning With Effective Learning Techniques","authors":"Dunlosky, Rawson, Marsh, Nathan & Willingham","year":2013,"venue":"Psychological Science in the Public Interest, 14(1), 4–58","url":"https://doi.org/10.1177/1529100612453266","evidence":"abstract+结论","supports":"10 种学习技术评级：练习测试与分散练习为高效用；精细提问、自我解释、交错练习为中等；重读、划线、总结为低效用。"},{"id":"S02","short":"Adesope 2017","title":"Rethinking the Use of Tests: A Meta-Analysis of Practice Testing","authors":"Adesope, Trevisan & Sundararajan","year":2017,"venue":"Review of Educational Research, 87(3), 659–701","url":"https://doi.org/10.3102/0034654316689306","evidence":"abstract","supports":"练习测试相对重读与其他对照条件有稳定学习收益，效应受测试形式、材料、延迟等调节。"},{"id":"S03","short":"Rowland 2014","title":"The effect of testing versus restudy on retention: A meta-analytic review","authors":"Rowland","year":2014,"venue":"Psychological Bulletin, 140(6), 1432–1463","url":"https://doi.org/10.1037/a0037559","evidence":"abstract","supports":"提取式测试（recall）比重认式测试带来更大的测试效应；努力加工是机制之一。"},{"id":"S04","short":"Cepeda 2006","title":"Distributed practice in verbal recall tasks: A review and quantitative synthesis","authors":"Cepeda, Pashler, Vul, Wixted & Rohrer","year":2006,"venue":"Psychological Bulletin, 132(3), 354–380","url":"https://doi.org/10.1037/0033-2909.132.3.354","evidence":"abstract","supports":"839 个分散练习评估：间隔长度与保留间隔共同决定最终记忆，最佳间隔随保留期变长而变长。"},{"id":"S05","short":"Brunmair & Richter 2019","title":"Similarity matters: A meta-analysis of interleaved learning and its moderators","authors":"Brunmair & Richter","year":2019,"venue":"Psychological Bulletin, 145(11), 1029–1052","url":"https://doi.org/10.1037/bul0000209","evidence":"abstract（开头截断）","supports":"交错练习对归纳学习有正效应，但受材料相似性与复杂度调节；说明文与单词类材料要谨慎。"},{"id":"S06","short":"Bisra 2018","title":"Inducing Self-Explanation: a Meta-Analysis","authors":"Bisra, Liu, Nesbit, Salimi & Winne","year":2018,"venue":"Educational Psychology Review, 30, 703–725","url":"https://doi.org/10.1007/s10648-018-9434-x","evidence":"metadata（摘要未取到）","supports":"提示学生自我解释通常带来中等正效应；本条只作方向性引用，不引用具体效应量。"},{"id":"S07","short":"Wisniewski 2020","title":"The Power of Feedback Revisited: A Meta-Analysis of Educational Feedback Research","authors":"Wisniewski, Zierer & Hattie","year":2020,"venue":"Frontiers in Psychology, 10, 3087","url":"https://doi.org/10.3389/fpsyg.2019.03087","evidence":"abstract","supports":"435 项研究、994 个效应、N>61,000：反馈总体 d=0.48，内容与形式造成显著异质性。"},{"id":"S08","short":"Alfieri 2013","title":"Learning Through Case Comparisons: A Meta-Analytic Review","authors":"Alfieri, Nokes-Malach & Schunn","year":2013,"venue":"Educational Psychologist, 48(2), 87–113","url":"https://doi.org/10.1080/00461520.2013.775712","evidence":"abstract","supports":"57 个实验、336 个检验：案例比较优于单例、顺序呈现与传统讲授，d=0.50，95% CI [0.44, 0.56]；找相似、比较后给原理、立即测试是调节项。"},{"id":"S09","short":"Pashler 2008","title":"Learning Styles: Concepts and Evidence","authors":"Pashler, McDaniel, Rohrer & Bjork","year":2008,"venue":"Psychological Science in the Public Interest, 9(3), 105–119","url":"https://doi.org/10.1111/j.1539-6053.2009.01038.x","evidence":"abstract","supports":"没有可靠证据支持“按学习风格匹配教学”能提升学习；不要按视觉/听觉型设计课程。"},{"id":"S10","short":"Sweller 1988","title":"Cognitive Load During Problem Solving: Effects on Learning","authors":"Sweller","year":1988,"venue":"Cognitive Science, 12(2), 257–285","url":"https://doi.org/10.1207/s15516709cog1202_4","evidence":"abstract","supports":"新手用手段-目的分析解题会占用工作记忆，反而不利于图式获得；这是工作样例效应的理论基础。"},{"id":"S11","short":"Renkl & Atkinson 2003","title":"Structuring the Transition From Example Study to Problem Solving in Cognitive Skill Acquisition: A Cognitive Load Perspective","authors":"Renkl & Atkinson","year":2003,"venue":"Educational Psychologist, 38(1), 15–41","url":"https://doi.org/10.1207/s15326985ep3801_3","evidence":"abstract","supports":"从完整工作样例逐步撤除步骤（fading），比一直看样例或一上来就解题更利于迁移。"},{"id":"S12","short":"Chi 1981","title":"Categorization and Representation of Physics Problems by Experts and Novices","authors":"Chi, Feltovich & Glaser","year":1981,"venue":"Cognitive Science, 5(2), 121–152","url":"https://doi.org/10.1207/s15516709cog0502_2","evidence":"abstract","supports":"专家按深层原理给问题分类，新手按表面特征分类；训练应逼学习者比较结构而不是记题材。"},{"id":"S13","short":"Kapur 2008","title":"Productive Failure","authors":"Kapur","year":2008,"venue":"Cognition and Instruction, 26(3), 379–424","url":"https://doi.org/10.1080/07370000802212669","evidence":"abstract","supports":"先让学习者解决结构不良问题、再给规范讲解，可以产生“有效失败”；不是所有失败都有效，取决于后续整合。"},{"id":"S14","short":"Schwartz & Bransford 1998","title":"A Time For Telling","authors":"Schwartz & Bransford","year":1998,"venue":"Cognition and Instruction, 16(4), 475–522","url":"https://doi.org/10.1207/s1532690xci1604_4","evidence":"metadata（摘要页被 JSTOR 占位）","supports":"先做发明/对比活动再听讲解，比先听讲解再做迁移任务表现更好；用于“先试后教”的设计依据。"},{"id":"S15","short":"Roediger & Karpicke 2006","title":"Test-Enhanced Learning: Taking Memory Tests Improves Long-Term Retention","authors":"Roediger & Karpicke","year":2006,"venue":"Psychological Science, 17(3), 249–255","url":"https://doi.org/10.1111/j.1467-9280.2006.01693.x","evidence":"abstract","supports":"5 分钟后重读更好，1 周后测试组更好：测试的收益在延迟后才显现。"},{"id":"S16","short":"Kulik & Fletcher 2016","title":"Effectiveness of Intelligent Tutoring Systems: A Meta-Analytic Review","authors":"Kulik & Fletcher","year":2016,"venue":"Review of Educational Research, 86(1), 42–78","url":"https://doi.org/10.3102/0034654315581420","evidence":"abstract","supports":"50 项对照评估：智能辅导中位效应 0.66 个标准差；效应受测验是否与教学目标对齐影响。"},{"id":"S17","short":"VanLehn 2011","title":"The Relative Effectiveness of Human Tutoring, Intelligent Tutoring Systems, and Other Tutoring Systems","authors":"VanLehn","year":2011,"venue":"Educational Psychologist, 46(4), 197–221","url":"https://doi.org/10.1080/00461520.2011.611369","evidence":"abstract","supports":"人类辅导 d=0.79，智能辅导 d=0.76，远低于流传的 2.0；即时、逐步反馈比“有没有人”更重要。"},{"id":"S18","short":"Wild & Pfannkuch 1999","title":"Statistical Thinking in Empirical Enquiry","authors":"Wild & Pfannkuch","year":1999,"venue":"International Statistical Review, 67(3), 223–248","url":"https://doi.org/10.1111/j.1751-5823.1999.tb00442.x","evidence":"abstract","supports":"统计思维的四维框架：探究循环（问题→计划→数据→分析→结论）、质疑循环、思维类型与 disposition。"},{"id":"S19","short":"Tintle 2015","title":"Combating Anti-Statistical Thinking Using Simulation-Based Methods","authors":"Tintle, Chance, Cobb, Roy, Swanson & VanderStoep","year":2015,"venue":"The American Statistician, 69(4), 331–337","url":"https://doi.org/10.1080/00031305.2015.1081619","evidence":"abstract","supports":"模拟/重抽样方法能更清楚地呈现推断逻辑，并把注意力放回完整研究过程与真实脏数据。"},{"id":"S20","short":"Garfield & Ben-Zvi 2007","title":"How Students Learn Statistics Revisited","authors":"Garfield & Ben-Zvi","year":2007,"venue":"International Statistical Review, 75(3), 372–396","url":"https://doi.org/10.1111/j.1751-5823.2007.00029.x","evidence":"abstract","supports":"统计学习研究的八条原则，强调概念理解、真实数据、合作与反馈，而不是公式记忆。"},{"id":"S21","short":"Chance 2004","title":"The Role of Technology in Improving Student Learning of Statistics","authors":"Chance, Ben-Zvi, Garfield & Medina","year":2007,"venue":"Technology Innovations in Statistics Education, 1(1)","url":"https://doi.org/10.5070/t511000026","evidence":"abstract","supports":"技术工具应服务于概念理解与真实数据分析，不要变成按钮操作训练。"},{"id":"S22","short":"GAISE 2016","title":"Guidelines for Assessment and Instruction in Statistics Education (GAISE) College Report 2016","authors":"ASA GAISE College Report ASA Revision Committee","year":2016,"venue":"American Statistical Association","url":"https://www.amstat.org/docs/default-source/amstat-documents/gaisecollege_full.pdf","evidence":"全文","supports":"六条建议：教统计思维（把统计作为解题与决策过程、多变量思维）、概念理解、真实数据、主动学习、技术、评估。"},{"id":"S23","short":"ICH E9(R1)","title":"Addendum on Estimands and Sensitivity Analysis in Clinical Trials to the Guideline on Statistical Principles for Clinical Trials","authors":"International Council for Harmonisation","year":2019,"venue":"ICH Harmonised Guideline E9(R1)","url":"https://database.ich.org/sites/default/files/E9-R1_Step4_Guideline_2019_1203.pdf","evidence":"全文","supports":"先定义 estimand（目标估计量）与 intercurrent events，再选统计方法；敏感性分析用于检验结论稳健性。"},{"id":"S24","short":"NIST/SEMATECH e-Handbook","title":"NIST/SEMATECH e-Handbook of Statistical Methods","authors":"NIST/SEMATECH","year":2012,"venue":"NIST Handbook 151","url":"https://www.itl.nist.gov/div898/handbook/","evidence":"目录与章节","supports":"按工程目的组织的方法体系：EDA、测量过程、过程建模、试验设计、过程控制、过程能力、可靠性。"},{"id":"S25","short":"Kohavi 2013","title":"Online Controlled Experiments at Large Scale","authors":"Kohavi, Deng, Frasca, Longbotham, Walker & Xu","year":2013,"venue":"KDD 2013","url":"https://doi.org/10.1145/2487575.2488217","evidence":"abstract","supports":"微软 Bing 每天 200+ 并发实验；大规模实验的挑战分为文化/组织、工程与可信度三类。"},{"id":"S26","short":"Deng 2013","title":"Improving the Sensitivity of Online Controlled Experiments by Utilizing Pre-Experiment Data","authors":"Deng, Xu, Kohavi & Walker","year":2013,"venue":"WSDM 2013","url":"https://doi.org/10.1145/2433396.2433413","evidence":"abstract","supports":"CUPED 用实验前数据做协变量，降低指标方差、提高实验灵敏度。"},{"id":"S27","short":"Xu 2015","title":"From Infrastructure to Culture: A/B Testing Challenges in Large Scale Social Networks","authors":"Xu, Chen, Fernandez, Sinno & Bhasin","year":2015,"venue":"KDD 2015","url":"https://doi.org/10.1145/2783258.2788602","evidence":"abstract","supports":"LinkedIn 每天 400+ 并发实验；实验平台、文化与统计陷阱是落地难点。"},{"id":"S28","short":"Gupta 2019","title":"Top Challenges from the first Practical Online Controlled Experiments Summit","authors":"Gupta, Kohavi, Tang, Xu et al.","year":2019,"venue":"SIGKDD Explorations, 21(1)","url":"https://doi.org/10.1145/3331651.3331655","evidence":"abstract","supports":"13 家机构（12 家公司 + Stanford）共同总结的实验挑战：样本比例失衡、偷看、多重比较、指标选择等。"},{"id":"S29","short":"Kohavi, Tang & Xu 2020","title":"Trustworthy Online Controlled Experiments: A Practical Guide to A/B Testing","authors":"Kohavi, Tang & Xu","year":2020,"venue":"Cambridge University Press","url":"https://doi.org/10.1017/9781108653985","evidence":"摘要+目录","supports":"A/B 实验的可信度、指标、陷阱与治理；书中经验来自每年 2 万+ 实验的公司。"},{"id":"S30","short":"Hyndman & Athanasopoulos","title":"Forecasting: Principles and Practice (3rd ed.)","authors":"Hyndman & Athanasopoulos","year":2021,"venue":"OTexts","url":"https://otexts.com/fpp3/","evidence":"目录","supports":"时间序列分解、ETS/ARIMA、预测评估与回测的标准教材结构。"},{"id":"S31","short":"Bruce & Bruce 2020","title":"Practical Statistics for Data Scientists (2nd ed.)","authors":"Bruce, Bruce & Gedeck","year":2020,"venue":"O'Reilly","url":"https://www.oreilly.com/library/view/practical-statistics-for/9781492072935/","evidence":"中文版目录（本地 PDF）","supports":"数据科学常用统计的章节结构：EDA、数据与抽样分布、统计实验与显著性检验、回归与预测、分类、统计机器学习、无监督学习。"},{"id":"S32","short":"Robyn (Meta)","title":"Robyn: Marketing Mix Modeling at Scale","authors":"Meta Open Source","year":2024,"venue":"GitHub","url":"https://github.com/facebookexperimental/Robyn","evidence":"README","supports":"营销组合模型（MMM）的工程化实现：饱和曲线、adstock、收益分解与预算优化。"},{"id":"S33","short":"Basel III d424","title":"Basel III: Finalising post-crisis reforms","authors":"Basel Committee on Banking Supervision","year":2017,"venue":"Bank for International Settlements","url":"https://www.bis.org/bcbs/publ/d424.htm","evidence":"页面与目录","supports":"信用风险、市场风险与操作风险的监管资本框架；评分卡/模型验证属于合规实践。"},{"id":"S34","short":"远程岗位样本（自采）","title":"40 条远程数据/分析岗位的公开 JD 样本","authors":"本报告自采：Remote OK、Arbeitnow、Remotive、Jobicy","year":2026,"venue":"research/jobs.json","url":"research/jobs.json","evidence":"原始数据","supports":"样本中 SQL 16、Python 21、A/B 8、时间序列 6、回归 3；具名经典检验几乎不出现。说明 JD 主要暴露工具与实验，不暴露完整方法栈。"},{"id":"S35","short":"Microsoft ExP","title":"Experimentation Platform (ExP)","authors":"Microsoft Research","year":2026,"venue":"Microsoft","url":"https://www.microsoft.com/en-us/research/group/experimentation-platform-exp/","evidence":"页面","supports":"大厂实验平台的公开介绍：实验数量、指标与治理挑战。"},{"id":"S36","short":"Hernán & Robins 2020","title":"Causal Inference: What If","authors":"Hernán & Robins","year":2020,"venue":"Chapman & Hall/CRC","url":"https://www.hsph.harvard.edu/miguel-hernan/causal-inference-book/","evidence":"目录","supports":"因果问题的形式化：潜在结果、识别假设、混杂、目标试验；用于区分“相关/预测/因果”。"},{"id":"S37","short":"Angrist & Pischke 2009","title":"Mostly Harmless Econometrics","authors":"Angrist & Pischke","year":2009,"venue":"Princeton University Press","url":"https://www.mostlyharmlesseconometrics.com/","evidence":"目录","supports":"DiD、IV、RDD 等准实验方法的识别假设与直觉。"},{"id":"S38","short":"Wasserstein & Lazar 2016","title":"The ASA Statement on p-Values: Context, Process, and Purpose","authors":"Wasserstein & Lazar","year":2016,"venue":"The American Statistician, 70(2), 129–133","url":"https://doi.org/10.1080/00031305.2016.1154108","evidence":"abstract","supports":"p 值不是“原假设为真的概率”，也不能单独证明效应存在或重要；六条原则用于解读。"},{"id":"S39","short":"Amrhein 2019","title":"Retire statistical significance","authors":"Amrhein, Greenland & McShane","year":2019,"venue":"Nature, 567, 305–307","url":"https://doi.org/10.1038/d41586-019-00857-9","evidence":"comment","supports":"不要把“显著/不显著”当二分结论；报告效应量与不确定性。"},{"id":"S40","short":"Simmons 2011","title":"False-Positive Psychology: Undisclosed Flexibility in Data Collection and Analysis","authors":"Simmons, Nelson & Simonsohn","year":2011,"venue":"Psychological Science, 22(11), 1359–1366","url":"https://doi.org/10.1177/0956797611417632","evidence":"abstract","supports":"研究者自由度（选择性报告、任意停止、协变量调整）可以把假阳性率推得很高。"},{"id":"S41","short":"Brown, Cai & DasGupta 2001","title":"Interval Estimation for a Binomial Proportion","authors":"Brown, Cai & DasGupta","year":2001,"venue":"Statistical Science, 16(2), 101–133","url":"https://doi.org/10.1214/ss/1009213286","evidence":"abstract","supports":"Wald 区间在小样本/极端比例下覆盖很差；Wilson 与 Jeffreys 更稳，精确法偏保守。"},{"id":"S42","short":"Benjamini & Hochberg 1995","title":"Controlling the False Discovery Rate: A Practical and Powerful Approach to Multiple Testing","authors":"Benjamini & Hochberg","year":1995,"venue":"JRSS B, 57(1), 289–300","url":"https://doi.org/10.1111/j.2517-6161.1995.tb02031.x","evidence":"abstract","supports":"FDR 控制：在大量检验中控制假发现比例，比 Bonferroni 更有检验力。"},{"id":"S43","short":"Holm 1979","title":"A Simple Sequentially Rejective Multiple Test Procedure","authors":"Holm","year":1979,"venue":"Scandinavian Journal of Statistics, 6(2), 65–70","url":"https://www.jstor.org/stable/4615733","evidence":"metadata","supports":"Holm 逐步法控制族错误率，比 Bonferroni 均匀放严更有效。"},{"id":"S44","short":"Cohen 1988","title":"Statistical Power Analysis for the Behavioral Sciences (2nd ed.)","authors":"Cohen","year":1988,"venue":"Lawrence Erlbaum","url":"https://www.taylorfrancis.com/books/mono/10.4324/9780203771587/statistical-power-analysis-behavioral-sciences-jacob-cohen","evidence":"经典教材","supports":"功效、效应量与样本量的标准关系；小/中/大效应量的经验基准。"},{"id":"S45","short":"Efron & Tibshirani 1993","title":"An Introduction to the Bootstrap","authors":"Efron & Tibshirani","year":1993,"venue":"Chapman & Hall","url":"https://doi.org/10.1201/9780429246593","evidence":"经典教材","supports":"Bootstrap 的构造、百分位/BCa 区间与适用边界。"},{"id":"S46","short":"Hosmer, Lemeshow & Sturdivant 2013","title":"Applied Logistic Regression (3rd ed.)","authors":"Hosmer, Lemeshow & Sturdivant","year":2013,"venue":"Wiley","url":"https://doi.org/10.1002/9781118548387","evidence":"经典教材","supports":"逻辑回归的估计、诊断、校准与样本量经验规则。"},{"id":"S47","short":"Shrout & Fleiss 1979","title":"Intraclass Correlations: Uses in Assessing Rater Reliability","authors":"Shrout & Fleiss","year":1979,"venue":"Psychological Bulletin, 86(2), 420–428","url":"https://doi.org/10.1037/0033-2909.86.2.420","evidence":"abstract","supports":"ICC 用于连续评分的评分者一致性；与 kappa（分类）区分。"},{"id":"S48","short":"Landis & Koch 1977","title":"The Measurement of Observer Agreement for Categorical Data","authors":"Landis & Koch","year":1977,"venue":"Biometrics, 33(1), 159–174","url":"https://doi.org/10.2307/2529310","evidence":"abstract","supports":"kappa 的常用解释区间；但 kappa 受基数率影响，不能只看数值。"},{"id":"S49","short":"McElreath 2020","title":"Statistical Rethinking (2nd ed.)","authors":"McElreath","year":2020,"venue":"CRC Press","url":"https://xcelab.net/rm/statistical-rethinking/","evidence":"目录","supports":"贝叶斯工作流：先验、后验、模型比较与因果图；适合作为贝叶斯模块的教材。"},{"id":"S50","short":"Hyndman & Koehler 2006","title":"Another look at measures of forecast accuracy","authors":"Hyndman & Koehler","year":2006,"venue":"International Journal of Forecasting, 22(4), 679–688","url":"https://doi.org/10.1016/j.ijforecast.2006.03.001","evidence":"abstract","supports":"MASE 等尺度无关的预测误差指标；不要只用 MAPE。"},{"id":"S51","short":"Cleveland 1990","title":"R: stl() — Seasonal-Trend Decomposition by Loess","authors":"R Core Team","year":2024,"venue":"R manual (stats package)","url":"https://stat.ethz.ch/R-manual/R-devel/library/stats/html/stl.html","evidence":"文档","supports":"STL 的实现、参数与稳健选项；原始方法见 Cleveland et al. 1990。"},{"id":"S52","short":"Rousseeuw & Leroy 1987","title":"Robust Regression and Outlier Detection","authors":"Rousseeuw & Leroy","year":1987,"venue":"Wiley","url":"https://doi.org/10.1002/0471725382","evidence":"经典教材","supports":"最小二乘对异常值敏感；稳健回归与诊断的必要性。"},{"id":"S53","short":"Tibshirani 1996","title":"Regression Shrinkage and Selection via the Lasso","authors":"Tibshirani","year":1996,"venue":"JRSS B, 58(1), 267–288","url":"https://doi.org/10.1111/j.2517-6161.1996.tb02080.x","evidence":"abstract","supports":"正则化用于高维预测；系数收缩带来偏差-方差权衡。"},{"id":"S54","short":"Breiman 2001","title":"Random Forests","authors":"Breiman","year":2001,"venue":"Machine Learning, 45, 5–32","url":"https://doi.org/10.1023/A:1010933404324","evidence":"abstract","supports":"树集成在预测任务上的强基线；可解释性与推断能力有限。"},{"id":"S55","short":"Shadish, Cook & Campbell 2002","title":"Experimental and Quasi-Experimental Designs for Generalized Causal Inference","authors":"Shadish, Cook & Campbell","year":2002,"venue":"Houghton Mifflin","url":"https://www.cengage.com/c/experimental-and-quasi-experimental-designs-for-generalized-causal-inference-1e-shadish/9780395615560/","evidence":"经典教材","supports":"实验与准实验设计的效度分类；因果结论依赖设计而不是统计技巧。"},{"id":"S56","short":"Rosenbaum & Rubin 1983","title":"The Central Role of the Propensity Score in Observational Studies for Causal Effects","authors":"Rosenbaum & Rubin","year":1983,"venue":"Biometrika, 70(1), 41–55","url":"https://doi.org/10.1093/biomet/70.1.41","evidence":"abstract","supports":"倾向得分把多维协变量压缩成一维；匹配/加权依赖可忽略性假设。"},{"id":"S57","short":"Abadie 2010","title":"Synthetic Control Methods for Comparative Case Studies","authors":"Abadie, Diamond & Hainmueller","year":2010,"venue":"JASA, 105(490), 493–505","url":"https://doi.org/10.1198/jasa.2009.ap08746","evidence":"abstract","supports":"合成控制用多个未处理单位加权构造反事实；适合单一个体/地区的政策评估。"},{"id":"S58","short":"Thistlethwaite & Campbell 1960","title":"Regression-Discontinuity Analysis","authors":"Thistlethwaite & Campbell","year":1960,"venue":"Journal of Educational Psychology, 51(6), 309–317","url":"https://doi.org/10.1037/h0044319","evidence":"metadata","supports":"断点回归的原始提出；识别依赖断点附近的局部随机化。"}]}};</script>
+<script>
+/* StatPick method-map report. No external dependencies. */
+(function () {
+  "use strict";
+  var D = window.__DATA__ || {};
+  var METHODS = (D.methods && D.methods.methods) || [];
+  var MODULES = (D.methods && D.methods.modules) || [];
+  var QUIZ = (D.quiz && D.quiz.items) || [];
+  var SOURCES = (D.sources && D.sources.items) || [];
+  var moduleName = {};
+  MODULES.forEach(function (m) { moduleName[m.id] = m.name; });
+
+  function esc(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+  function list(a) { return (a || []).map(esc).join("、"); }
+
+  function setHTML(node, html, context) {
+    // All interpolated values go through esc(); templates are static.
+    // createContextualFragment keeps table/select parsing correct without innerHTML.
+    var host = document.createElement(context || "div");
+    var range = document.createRange();
+    range.selectNodeContents(host);
+    host.appendChild(range.createContextualFragment(String(html == null ? "" : html)));
+    node.replaceChildren.apply(node, Array.prototype.slice.call(host.childNodes));
+  }
+
+  function el(tag, cls, html) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (html != null) setHTML(n, html);
+    return n;
+  }
+
+  /* ---------------------------------------------------------------- theme */
+  function currentTheme() {
+    return document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+  }
+  function setTheme(t, save) {
+    document.documentElement.setAttribute("data-theme", t);
+    document.querySelectorAll("[data-theme-toggle]").forEach(function (b) {
+      b.textContent = t === "dark" ? "☀ 亮色" : "☾ 暗色";
+      b.setAttribute("aria-label", t === "dark" ? "切换到亮色主题" : "切换到暗色主题");
+    });
+    if (save) { try { localStorage.setItem("statpick.theme", t); } catch { /* private mode */ } }
+  }
+  function initTheme() {
+    document.querySelectorAll("[data-theme-toggle]").forEach(function (b) {
+      b.addEventListener("click", function () { setTheme(currentTheme() === "dark" ? "light" : "dark", true); });
+    });
+    setTheme(currentTheme(), false);
+  }
+
+  /* ---------------------------------------------------------------- sidebar */
+  function initSidebar() {
+    var side = document.getElementById("sidebar");
+    var heads = Array.prototype.slice.call(document.querySelectorAll("#content h2"));
+    var nav = el("nav", "side-nav");
+    nav.setAttribute("aria-label", "章节导航");
+    heads.forEach(function (h, i) {
+      if (!h.id) h.id = "s" + i;
+      var raw = h.textContent.trim();
+      var hnum = h.querySelector(".hnum");
+      var num = hnum ? hnum.textContent.trim() : String(i);
+      var label = raw.replace(/^\d+\s*/, "");
+      var a = el("a", "nav-link", '<span class="num">' + esc(num) + "</span>" + esc(label));
+      a.href = "#" + h.id;
+      a.addEventListener("click", function () { document.body.classList.remove("nav-open"); });
+      nav.appendChild(a);
+    });
+    var foot = el("div", "side-foot");
+    setHTML(foot, '<span class="meta">' + METHODS.length + " 张卡 · " + SOURCES.length + ' 条来源</span>' +
+      '<button class="icon-btn" data-theme-toggle type="button">☾ 暗色</button>');
+    setHTML(side, "");
+    side.appendChild(el("div", "side-head",
+      '<div class="side-kicker">Statistical Method Map</div>' +
+      '<div class="side-title">统计选型地图</div>' +
+      '<div class="progress" aria-hidden="true"><span id="progress-bar"></span></div>'));
+    side.appendChild(nav);
+    side.appendChild(foot);
+
+    var drawer = el("button", "", "≡ 目录");
+    drawer.id = "drawer-btn";
+    drawer.type = "button";
+    drawer.setAttribute("aria-controls", "sidebar");
+    drawer.setAttribute("aria-expanded", "false");
+    document.body.appendChild(drawer);
+    var overlay = el("div", "");
+    overlay.id = "overlay";
+    document.body.appendChild(overlay);
+    drawer.addEventListener("click", function () {
+      document.body.classList.add("nav-open");
+      drawer.setAttribute("aria-expanded", "true");
+    });
+    overlay.addEventListener("click", closeDrawer);
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") { closeDrawer(); closeModal(); }
+    });
+    function closeDrawer() {
+      document.body.classList.remove("nav-open");
+      drawer.setAttribute("aria-expanded", "false");
+    }
+    window.__closeDrawer = closeDrawer;
+  }
+
+  function initScrollSpy() {
+    var heads = Array.prototype.slice.call(document.querySelectorAll("#content h2"));
+    var links = Array.prototype.slice.call(document.querySelectorAll(".side-nav .nav-link"));
+    var bar = document.getElementById("progress-bar");
+    var nav = document.querySelector(".side-nav");
+    var ticking = false;
+    function update() {
+      ticking = false;
+      var y = window.scrollY || document.documentElement.scrollTop;
+      var max = document.documentElement.scrollHeight - window.innerHeight;
+      if (bar) bar.style.width = (max > 0 ? Math.min(100, Math.max(0, y / max * 100)) : 0) + "%";
+      var current = heads[0];
+      for (var i = 0; i < heads.length; i++) {
+        if (heads[i].getBoundingClientRect().top <= 160) current = heads[i];
+      }
+      links.forEach(function (a) {
+        var on = a.getAttribute("href") === "#" + (current && current.id);
+        a.setAttribute("aria-current", on ? "true" : "false");
+        if (on && nav) {
+          var r = a.getBoundingClientRect(), nr = nav.getBoundingClientRect();
+          if (r.top < nr.top || r.bottom > nr.bottom) {
+            nav.scrollTop += r.top - nr.top - nr.height / 2 + r.height / 2;
+          }
+        }
+      });
+    }
+    function onScroll() {
+      if (!ticking) { ticking = true; window.requestAnimationFrame(update); }
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    update();
+  }
+
+  /* ---------------------------------------------------------------- hero */
+  function initHero() {
+    var content = document.getElementById("content");
+    var firstH2 = content.querySelector("h2");
+    var depth = METHODS.filter(function (m) { return m.depth === "deep"; }).length;
+    var short = METHODS.filter(function (m) { return m.depth === "short"; }).length;
+    var hero = el("header", "hero");
+    setHTML(hero, '<div class="kicker">研究笔记 · 2026-11 · 第 1 版</div>' +
+      '<h1>统计选型地图</h1>' +
+      '<p class="sub">不按知识点学统计，按“这个场景该用哪个方法”学。58 张方法卡、12 个深挖模块、3 棵决策树，配 12 道开场题。</p>' +
+      '<div class="chips">' +
+        '<span class="chip"><b>' + METHODS.length + '</b> 张方法卡</span>' +
+        '<span class="chip"><b>' + depth + '</b> 张核心 · <b>' + short + '</b> 张行业</span>' +
+        '<span class="chip"><b>12</b> 个模块</span>' +
+        '<span class="chip"><b>' + QUIZ.length + '</b> 道自测</span>' +
+        '<span class="chip"><b>' + SOURCES.length + '</b> 条来源</span>' +
+      '</div>' +
+      '<div class="hero-actions">' +
+        '<a class="btn primary" href="#s0">十分钟速读 →</a>' +
+        '<a class="btn" href="#quiz-block">做 12 道自测</a>' +
+        '<a class="btn" href="#cards-block">查方法卡</a>' +
+      '</div>');
+    content.insertBefore(hero, firstH2);
+  }
+
+  /* ---------------------------------------------------------------- cards */
+  var compareSet = new Set();
+  function initCards() {
+    var host = document.getElementById("cards-block");
+    if (!host) return;
+    var wrap = el("section", "");
+    setHTML(wrap, '<div class="block-title">方法卡索引</div>' +
+      '<p class="block-sub">按目标、层级、模块筛选，或直接搜“小样本”“配对”“AUC”。点开卡片看前提、失效信号和替代方法。</p>' +
+      '<div class="cards-toolbar">' +
+        '<input type="search" id="card-search" placeholder="搜方法、场景或症状（按 / 聚焦）" aria-label="搜索方法卡">' +
+        '<select id="card-module" aria-label="按模块筛选"><option value="">全部模块</option></select>' +
+        '<select id="card-tier" aria-label="按层级筛选"><option value="">全部层级</option><option>S</option><option>A</option><option>B</option><option>C</option></select>' +
+        '<select id="card-depth" aria-label="按深度筛选"><option value="">全部深度</option><option value="deep">核心卡</option><option value="short">行业卡</option></select>' +
+        '<span class="cards-count" id="cards-count"></span>' +
+      '</div>' +
+      '<div class="cards-grid" id="cards-grid"></div>');
+    setHTML(host, "");
+    host.appendChild(wrap);
+
+    var moduleSel = wrap.querySelector("#card-module");
+    MODULES.forEach(function (m) {
+      var o = document.createElement("option");
+      o.value = m.id; o.textContent = m.id + " " + m.name;
+      moduleSel.appendChild(o);
+    });
+    var grid = wrap.querySelector("#cards-grid");
+    var count = wrap.querySelector("#cards-count");
+    var q = wrap.querySelector("#card-search");
+    var tierSel = wrap.querySelector("#card-tier");
+    var depthSel = wrap.querySelector("#card-depth");
+
+    function matches(m) {
+      if (moduleSel.value && m.moduleId !== moduleSel.value) return false;
+      if (tierSel.value && m.tier !== tierSel.value) return false;
+      if (depthSel.value && m.depth !== depthSel.value) return false;
+      if (!q.value.trim()) return true;
+      var hay = [m.name, m.en, m.answers, m.nRule, m.card.what, m.card.when, m.card.notWhen, m.card.example,
+        (m.assumptions || []).join(" "), (m.contraindications || []).join(" "),
+        (m.failureSignals || []).join(" "), (m.alternatives || []).join(" "), (m.industries || []).join(" ")]
+        .join(" ").toLowerCase();
+      return q.value.trim().toLowerCase().split(/\s+/).every(function (w) { return hay.indexOf(w) >= 0; });
+    }
+
+    function cardHtml(m) {
+      var altNames = (m.alternatives || []).map(function (id) {
+        var x = METHODS.find(function (y) { return y.id === id; });
+        return x ? x.name : id;
+      });
+      return '<article class="card" data-id="' + esc(m.id) + '">' +
+        '<div class="card-head">' +
+          '<h3>' + esc(m.name) + '<span class="en">' + esc(m.en) + '</span></h3>' +
+          '<span class="tier ' + esc(m.tier) + '" title="层级 ' + esc(m.tier) + '">' + esc(m.tier) + '</span>' +
+        '</div>' +
+        '<div class="modtag">' + esc(m.moduleId) + " · " + esc(moduleName[m.moduleId] || "") + " · " + esc(m.tier) + " 层</div>" +
+        '<p class="answer">' + esc(m.answers) + "</p>" +
+        '<details><summary>展开：什么时候用 / 不能用 / 例子</summary>' +
+          '<dl class="kv">' +
+            '<dt>何时用</dt><dd>' + esc(m.card.when) + "</dd>" +
+            '<dt>何时别用</dt><dd>' + esc(m.card.notWhen) + "</dd>" +
+            '<dt>前提</dt><dd>' + esc(list(m.assumptions)) + "</dd>" +
+            '<dt>数据</dt><dd>' + esc(list(m.dataTypes)) + "；" + esc(m.nRule) + "</dd>" +
+            '<dt>例子</dt><dd>' + esc(m.card.example) + "</dd>" +
+            '<dt>误用</dt><dd>' + esc(list(m.card.misuse)) + "</dd>" +
+            '<dt>失效信号</dt><dd>' + esc(list(m.failureSignals)) + "</dd>" +
+            '<dt>替代</dt><dd>' + esc(altNames.join("、")) + "</dd>" +
+            '<dt>行业</dt><dd>' + esc(list(m.industries)) + "</dd>" +
+            '<dt>来源</dt><dd>' + (m.sources || []).map(function (s) { return '<a class="cite" href="#s-' + esc(s) + '">' + esc(s) + "</a>"; }).join(" ") + "</dd>" +
+          "</dl>" +
+        "</details>" +
+        '<div class="card-actions"><button class="mini" type="button" data-compare="' + esc(m.id) + '" aria-pressed="false">加入对比</button></div>' +
+      "</article>";
+    }
+
+    function render() {
+      var modOrder = {};
+      MODULES.forEach(function (m, i) { modOrder[m.id] = i; });
+      var order = { S: 0, A: 1, B: 2, C: 3 };
+      var list = METHODS.filter(matches).slice().sort(function (a, b) {
+        return (modOrder[a.moduleId] - modOrder[b.moduleId]) || (order[a.tier] - order[b.tier]) || a.id.localeCompare(b.id);
+      });
+      setHTML(grid, list.map(cardHtml).join(""));
+      count.textContent = "显示 " + list.length + " / " + METHODS.length;
+      if (!list.length) setHTML(grid, '<p class="empty">没有匹配的卡，换个关键词试试。</p>');
+      syncCompareButtons();
+    }
+    [q, moduleSel, tierSel, depthSel].forEach(function (n) {
+      n.addEventListener("input", render);
+      n.addEventListener("change", render);
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "/" && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) {
+        e.preventDefault(); q.focus();
+      }
+    });
+
+    grid.addEventListener("click", function (e) {
+      var b = e.target.closest("[data-compare]");
+      if (!b) return;
+      var id = b.getAttribute("data-compare");
+      if (compareSet.has(id)) compareSet.delete(id);
+      else {
+        if (compareSet.size >= 3) compareSet.delete(compareSet.values().next().value);
+        compareSet.add(id);
+      }
+      syncCompareButtons();
+      updateTray();
+    });
+    render();
+    updateTray();
+  }
+
+  function syncCompareButtons() {
+    document.querySelectorAll("[data-compare]").forEach(function (b) {
+      var on = compareSet.has(b.getAttribute("data-compare"));
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+      b.textContent = on ? "已加入" : "加入对比";
+    });
+  }
+
+  function updateTray() {
+    var tray = document.getElementById("tray");
+    if (!tray) {
+      tray = el("div", "");
+      tray.id = "tray";
+      setHTML(tray, '<span class="tray-text"><b id="tray-n">0</b> 个待对比</span>' +
+        '<button class="btn primary" type="button" id="tray-open">对比</button>' +
+        '<button class="mini" type="button" id="tray-clear">清空</button>');
+      document.body.appendChild(tray);
+      tray.querySelector("#tray-open").addEventListener("click", openCompare);
+      tray.querySelector("#tray-clear").addEventListener("click", function () {
+        compareSet.clear(); syncCompareButtons(); updateTray();
+      });
+    }
+    tray.classList.toggle("show", compareSet.size > 0);
+    var n = document.getElementById("tray-n");
+    if (n) n.textContent = compareSet.size;
+  }
+
+  function openCompare() {
+    var modal = document.getElementById("modal");
+    if (!modal) {
+      modal = el("div", "");
+      modal.id = "modal";
+      setHTML(modal, '<div class="modal-card" role="dialog" aria-modal="true" aria-label="方法对比">' +
+        '<div class="modal-head"><h3>方法对比</h3><button class="mini" type="button" id="modal-close">关闭</button></div>' +
+        '<div class="table-wrap"><table id="compare-table"></table></div></div>');
+      document.body.appendChild(modal);
+      modal.addEventListener("click", function (e) { if (e.target === modal) closeModal(); });
+      modal.querySelector("#modal-close").addEventListener("click", closeModal);
+    }
+    var rows = [
+      ["回答什么", function (m) { return m.answers; }],
+      ["什么时候用", function (m) { return m.card.when; }],
+      ["什么时候别用", function (m) { return m.card.notWhen; }],
+      ["关键前提", function (m) { return list(m.assumptions); }],
+      ["失效信号", function (m) { return list(m.failureSignals); }],
+      ["替代方法", function (m) {
+        return (m.alternatives || []).map(function (id) {
+          var x = METHODS.find(function (y) { return y.id === id; });
+          return x ? x.name : id;
+        }).join("、");
+      }]
+    ];
+    var picked = Array.from(compareSet).map(function (id) { return METHODS.find(function (m) { return m.id === id; }); }).filter(Boolean);
+    var html = "<thead><tr><th></th>" + picked.map(function (m) { return "<th>" + esc(m.name) + "<br><span class=\"ev\">" + esc(m.tier) + " · " + esc(m.moduleId) + "</span></th>"; }).join("") + "</tr></thead><tbody>";
+    rows.forEach(function (r) {
+      html += "<tr><th>" + esc(r[0]) + "</th>" + picked.map(function (m) { return "<td>" + esc(r[1](m)) + "</td>"; }).join("") + "</tr>";
+    });
+    html += "</tbody>";
+    setHTML(document.getElementById("compare-table"), html, "table");
+    modal.classList.add("show");
+  }
+  function closeModal() {
+    var m = document.getElementById("modal");
+    if (m) m.classList.remove("show");
+  }
+
+  /* ---------------------------------------------------------------- quiz */
+  var QKEY = "statpick.report.quiz.v1";
+  function initQuiz() {
+    var host = document.getElementById("quiz-block");
+    if (!host) return;
+    var saved = {};
+    try { saved = JSON.parse(localStorage.getItem(QKEY) || "{}") || {}; } catch { saved = {}; }
+    var wrap = el("section", "");
+    setHTML(wrap, '<div class="block-title">十二道开场题</div>' +
+      '<p class="block-sub">每题只考一个判断，答错会解释为什么。做完看右上角的分数，错三题以内算建立框架。</p>' +
+      '<div class="quiz-summary"><span class="score">已答 <b id="q-done">0</b> / ' + QUIZ.length + '</span>' +
+      '<span class="score">答对 <b id="q-right">0</b></span>' +
+      '<button class="mini" type="button" id="q-reset">重做</button>' +
+      '<span class="cards-count" id="q-note"></span></div>' +
+      '<div id="quiz-list"></div>');
+    setHTML(host, "");
+    host.appendChild(wrap);
+    var list = wrap.querySelector("#quiz-list");
+    var state = {};
+    QUIZ.forEach(function (item) {
+      var q = el("div", "q");
+      q.setAttribute("data-qid", item.id);
+      var opts = item.options.map(function (o) {
+        return '<button class="opt" type="button" data-opt="' + esc(o.id) + '">' + esc(o.label) +
+          '<span class="why" hidden>' + esc(o.why) + "</span></button>";
+      }).join("");
+      setHTML(q, '<div class="qmod">' + esc(item.moduleId) + " · " + esc(moduleName[item.moduleId] || "") + "</div>" +
+        "<h4>" + esc(item.title) + "</h4>" +
+        '<div class="ctx">' + esc(item.context) + "</div>" +
+        '<div class="ask">' + esc(item.decision) + "</div>" +
+        '<div class="opts">' + opts + "</div>" +
+        '<div class="fb" hidden></div>');
+      list.appendChild(q);
+      if (saved[item.id]) answer(item, q, saved[item.id]);
+    });
+
+    list.addEventListener("click", function (e) {
+      var b = e.target.closest("[data-opt]");
+      if (!b || b.disabled) return;
+      var q = b.closest(".q");
+      var item = QUIZ.find(function (x) { return x.id === q.getAttribute("data-qid"); });
+      answer(item, q, b.getAttribute("data-opt"));
+      try { saved[item.id] = b.getAttribute("data-opt"); localStorage.setItem(QKEY, JSON.stringify(saved)); } catch { /* quota */ }
+    });
+
+    function answer(item, q, optId) {
+      if (state[item.id]) return;
+      state[item.id] = optId;
+      q.classList.add("done");
+      q.querySelectorAll(".opt").forEach(function (b) {
+        b.disabled = true;
+        var id = b.getAttribute("data-opt");
+        var why = b.querySelector(".why");
+        if (why) why.hidden = false;
+        if (id === item.correct) b.classList.add("correct");
+        if (id === optId && optId !== item.correct) b.classList.add("wrong");
+      });
+      var fb = q.querySelector(".fb");
+      fb.hidden = false;
+      var ok = optId === item.correct;
+      setHTML(fb, "<b>" + (ok ? "对了。" : "不对。") + "</b>" + esc(item.explanation));
+      updateScore();
+    }
+    function updateScore() {
+      var ids = Object.keys(state);
+      var right = ids.filter(function (id) {
+        var it = QUIZ.find(function (x) { return x.id === id; });
+        return it && state[id] === it.correct;
+      }).length;
+      wrap.querySelector("#q-done").textContent = ids.length;
+      wrap.querySelector("#q-right").textContent = right;
+      wrap.querySelector("#q-note").textContent = ids.length === QUIZ.length ? "做完啦，错题回到对应模块再看一眼。" : "";
+    }
+    wrap.querySelector("#q-reset").addEventListener("click", function () {
+      try { localStorage.removeItem(QKEY); } catch { /* private mode */ }
+      state = {}; saved = {};
+      setHTML(list, "");
+      QUIZ.forEach(function (item) {
+        var q = el("div", "q");
+        q.setAttribute("data-qid", item.id);
+        setHTML(q, '<div class="qmod">' + esc(item.moduleId) + " · " + esc(moduleName[item.moduleId] || "") + "</div>" +
+          "<h4>" + esc(item.title) + "</h4>" +
+          '<div class="ctx">' + esc(item.context) + "</div>" +
+          '<div class="ask">' + esc(item.decision) + "</div>" +
+          '<div class="opts">' + item.options.map(function (o) {
+            return '<button class="opt" type="button" data-opt="' + esc(o.id) + '">' + esc(o.label) +
+              '<span class="why" hidden>' + esc(o.why) + "</span></button>";
+          }).join("") + "</div>" +
+          '<div class="fb" hidden></div>');
+        list.appendChild(q);
+      });
+      updateScore();
+    });
+    updateScore();
+  }
+
+  /* ---------------------------------------------------------------- trees */
+  function initTrees() {
+    var host = document.getElementById("trees-block");
+    if (!host) return;
+    setHTML(host, '<div class="block-title">三棵决策树</div>' +
+      '<p class="block-sub">先过六问，再用这三棵树定位候选方法。树是拐杖，不是答案；最后仍要回到前提和失效信号。</p>' +
+      '<div class="trees">' +
+      '<div class="tree"><h3>树 1：比较两组或多组</h3>' +
+        '<span class="tnode">结果是什么类型？</span>' +
+        '<div class="tbranch"><span class="tlabel">连续</span><div class="tchild">' +
+          '<span class="tnode">几组？</span>' +
+          '<div class="tbranch"><span class="tlabel">两组</span><div class="tchild"><span class="tleaf">独立：<b>Welch t</b>；同一批人前后：<b>配对 t</b>；分布太偏/等级：<b>Mann-Whitney / Wilcoxon</b></span></div></div>' +
+          '<div class="tbranch"><span class="tlabel">三组+</span><div class="tchild"><span class="tleaf">方差齐：<b>ANOVA</b>；不齐：<b>Welch ANOVA</b>；强偏态：<b>Kruskal-Wallis</b>；事后都要校正</span></div></div>' +
+        "</div></div>" +
+        '<div class="tbranch"><span class="tlabel">0 / 1</span><div class="tchild">' +
+          '<span class="tnode">几组？</span>' +
+          '<div class="tbranch"><span class="tlabel">两组</span><div class="tchild"><span class="tleaf">独立且事件数够：<b>两比例 z</b>；事件数少：<b>Fisher</b>；同一批人前后：<b>McNemar</b></span></div></div>' +
+          '<div class="tbranch"><span class="tlabel">三组+</span><div class="tchild"><span class="tleaf"><b>卡方</b>，再看标准化残差找差异来源</span></div></div>' +
+        "</div></div>" +
+      "</div>" +
+      '<div class="tree"><h3>树 2：关系、预测与时间</h3>' +
+        '<span class="tnode">你要解释，还是要预测？</span>' +
+        '<div class="tbranch"><span class="tlabel">解释</span><div class="tchild">' +
+          '<span class="tleaf">两个连续/有序变量：<b>相关</b>，再看散点图决定 Pearson 或 Spearman</span>' +
+          '<span class="tleaf">控制其他变量：<b>线性回归</b>，结果二分类：<b>逻辑回归</b>，计数：<b>泊松 / 负二项</b></span>' +
+          '<span class="tleaf">有嵌套/重复测量：<b>混合效应模型</b></span>' +
+        "</div></div>" +
+        '<div class="tbranch"><span class="tlabel">预测</span><div class="tchild">' +
+          '<span class="tleaf">先留出验证集；分类看 <b>ROC/AUC</b> 与 <b>校准</b>，不要只看一个指标</span>' +
+          '<span class="tleaf">有时间顺序：<b>STL + ETS/ARIMA</b>，用<b>滚动回测</b>选模型</span>' +
+          '<span class="tleaf">样本有嵌套：<b>混合模型</b>；高维：正则化或树模型，再谈解释</span>' +
+        "</div></div>" +
+      "</div>" +
+      '<div class="tree"><h3>树 3：因果与实验</h3>' +
+        '<span class="tnode">能不能随机分配？</span>' +
+        '<div class="tbranch"><span class="tlabel">能</span><div class="tchild"><span class="tleaf">两组：<b>A/B</b>；多因素：<b>析因 DOE</b>；先算<b>样本量</b>，再写停止规则</span></div></div>' +
+        '<div class="tbranch"><span class="tlabel">不能</span><div class="tchild">' +
+          '<span class="tnode">有什么可利用的结构？</span>' +
+          '<div class="tbranch"><span class="tlabel">硬阈值</span><div class="tchild"><span class="tleaf"><b>RDD</b>：比较断点两侧，检查有没有操纵</span></div></div>' +
+          '<div class="tbranch"><span class="tlabel">前后多期</span><div class="tchild"><span class="tleaf">有对照组：<b>DiD</b>，先验平行趋势；单单位：<b>合成控制 / ITS</b></span></div></div>' +
+          '<div class="tbranch"><span class="tlabel">有工具</span><div class="tchild"><span class="tleaf"><b>IV</b>：相关性 + 排他性，第一阶段要够强</span></div></div>' +
+          '<div class="tbranch"><span class="tlabel">都没有</span><div class="tchild"><span class="tleaf">只做描述 + 敏感性分析，不要把相关写成因果</span></div></div>' +
+        "</div></div>" +
+      "</div></div>");
+  }
+
+  /* ---------------------------------------------------------------- sources */
+  function initSources() {
+    var host = document.getElementById("sources-block");
+    if (!host) return;
+    var rows = SOURCES.map(function (s) {
+      return "<tr id=\"s-" + esc(s.id) + "\">" +
+        "<td><b>" + esc(s.id) + "</b></td>" +
+        "<td><a href=\"" + esc(s.url) + "\" target=\"_blank\" rel=\"noopener\">" + esc(s.title) + "</a>" +
+        "<div class=\"en\">" + esc(s.authors) + " · " + esc(s.year) + " · " + esc(s.venue) + "</div></td>" +
+        "<td><span class=\"ev\">" + esc(s.evidence) + "</span></td>" +
+        "<td>" + esc(s.supports) + "</td>" +
+      "</tr>";
+    }).join("");
+    setHTML(host, '<div class="block-title">来源清单</div>' +
+      '<p class="block-sub">每条来源只用于它实际支持的主张；evidence 写了我读到什么程度。点击标题打开原文或 DOI。</p>' +
+      '<div class="table-wrap"><table id="sources-table"><thead><tr><th>编号</th><th>来源</th><th>读到</th><th>支持什么</th></tr></thead><tbody>' +
+      rows + "</tbody></table></div>");
+  }
+
+  /* ---------------------------------------------------------------- boot */
+  function boot() {
+    initSidebar();
+    initHero();
+    initCards();
+    initTrees();
+    initQuiz();
+    initSources();
+    initTheme();
+    initScrollSpy();
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+})();
+
+</script>
+</body>
+</html>
